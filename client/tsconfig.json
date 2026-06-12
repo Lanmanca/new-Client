@@ -1,0 +1,16 @@
+{
+    /* Base configuration. Do not edit this field. */
+    "extends": "./temp/tsconfig.cocos.json",
+
+    /* Add your custom configuration here. */
+    "compilerOptions": {
+        "strict": false,
+        "target": "esnext",
+        "module": "esnext",
+        "baseUrl": "./",
+        "paths": {
+            "@/*": ["./assets/scripts/*"]
+        },
+        "allowSyntheticDefaultImports": true
+    }
+}

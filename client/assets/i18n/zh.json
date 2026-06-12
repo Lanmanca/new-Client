@@ -1,0 +1,328 @@
+{
+    "loading": {
+        "language": "正在加载语言包......",
+        "image": "正在加载图片资源......",
+        "ui": "正在加载UI资源......",
+        "client": "初始化客户端......",
+        "user": "正在登录......"
+    },
+    "request": {
+        "error": {
+            "cancel": "请求取消",
+            "timeout": "请求超时，请检查网络连接",
+            "fail": "请求失败",
+            "unknown": "请求错误，{error}",
+            "timestamp": "获取时间戳失败",
+            "network": "网络错误，请检查网络连接",
+            "server": "服务器错误，请稍后再试或检查网络连接",
+            "not_found": "接口不存在",
+            "forbidden": "禁止访问",
+            "unauthorized": "未授权",
+            "join_room": "加入房间失败，请检查网络连接或稍后再试",
+            "not_connected": "未连接"
+        },
+        "success": {
+            "success": "请求成功"
+        }
+    },
+    "server_error": {
+        "INSUFFICIENT_STACK_TO_READY": "桌上没有可用筹码，无法准备。若需补码请站起后重新坐下并买入。",
+        "INSUFFICIENT_OFF_TABLE_BALANCE": "账外余额不足，无法完成买入或扣款。",
+        "DATABASE_UNAVAILABLE": "数据服务暂不可用，请稍后重试。",
+        "BUY_IN_REQUIRED": "请先填写买入金额。",
+        "BUY_IN_OUT_OF_RANGE": "买入金额不在允许范围内。",
+        "PLAYER_NOT_IN_ROOM": "您不在该房间内。",
+        "SEAT_OCCUPIED": "该座位已被占用。",
+        "NEED_STAND_UP_FIRST": "请先站起后再操作。",
+        "NEED_SIT_DOWN_FIRST": "你还没有坐下。",
+        "SEAT_INDEX_INVALID": "座位号不在可选范围内，请重新选择空位。",
+        "GAME_ACTION_LOCKED": "对局进行中，当前无法执行该操作。",
+        "NOT_ENOUGH_READY_PLAYERS": "准备人数不足，无法开局。",
+        "ROOM_ENDED": "房间已结束。",
+        "ROOM_NOT_FOUND": "房间不存在。",
+        "ROOM_ALREADY_JOINED": "您已在该房间中。",
+        "ROOM_IS_FULL": "房间已满。",
+        "NOT_ROOM_OWNER": "仅房主可执行此操作。",
+        "NOT_YOUR_TURN": "当前不是您的行动回合。",
+        "INVALID_ACTION": "无效操作。",
+        "CANNOT_CHECK": "当前不能过牌。",
+        "CANNOT_RAISE": "当前不能加注或加注额不合法。",
+        "WS_MESSAGE_INVALID": "消息格式无效，请重试或重新进入房间。",
+        "WS_EVENT_RECEIVED": "操作已收到。"
+    },
+    "form": {
+        "required": "{field}不能为空",
+        "range_invalid": "{field}超出范围{min}-{max}",
+        "only_max_range": "{field}不能超过{max}",
+        "only_min_range": "{field}不能小于{min}",
+        "length_invalid": "{field}长度超出范围{min}-{max}",
+        "only_max_length": "{field}不能超过{max}个字符",
+        "only_min_length": "{field}不能小于{min}个字符",
+        "number_invalid": "{field}需要数字",
+        "integer_invalid": "{field}需要整数",
+        "format_invalid": "{field}的格式无效"
+    },
+    "navbar": {
+        "game": "游戏",
+        "home": "大厅",
+        "user": "用户"
+    },
+    "modal": {
+        "title": "提示",
+        "confirm": "确定",
+        "cancel": "取消"
+    },
+    "scenes": {
+        "error": {
+            "not_found": "未找到场景"
+        }
+    },
+    "settlement": {
+        "total_pot": "总底池",
+        "pot_payouts": "主池派奖",
+        "rake": "房主抽佣",
+        "split_win": "平分派奖"
+    },
+    "pages": {
+        "error": {
+            "not_found": "页面开发中..."
+        },
+        "game": {
+            "room_input_tip": "输入房间号加入对局",
+            "or": "或",
+            "create_button": "创建房间",
+            "room_settings": {
+                "title": "房间设置",
+                "cancel": "取消",
+                "confirm": "确定",
+                "room_type": {
+                    "title": "房间类型",
+                    "private": "私密房间",
+                    "public": "公开房间",
+                    "help": "私密房间只能通过房间号进入；公开房间在大厅公开，任何人都可以进入"
+                },
+                "owner_commission": {
+                    "title": "房主抽佣比例",
+                    "help": "填写 0～100 的整数，表示从每手底池抽取的百分比（例如 5 表示 5%）"
+                },
+                "max_players": {
+                    "title": "房间玩家人数"
+                },
+                "leave_timeout": {
+                    "title": "离开超时（秒）"
+                },
+                "action_timeout": {
+                    "title": "行动超时（秒）"
+                },
+                "small_blind": {
+                    "title": "小盲注金额"
+                },
+                "ante": {
+                    "title": "前注金额"
+                },
+                "max_buy_in": {
+                    "title": "最大买入金额"
+                },
+                "min_buy_in": {
+                    "title": "最小买入金额"
+                },
+                "allow_watch": {
+                    "title": "允许观战"
+                },
+                "max_watchers": {
+                    "title": "最大观战者数量",
+                    "help": "只有在允许观战时才有效"
+                },
+                "max_rounds": {
+                    "title": "最大局数"
+                }
+            },
+            "buy_in_modal": {
+                "title": "买入筹码上桌",
+                "confirm": "确认买入",
+                "amount_label": "买入金额（桌上筹码）",
+                "help": "本桌限额 {min}～{max}；当前账外余额 {account}（最终以服务器校验为准）"
+            }
+        },
+        "home": {
+            "slide_switch": {
+                "current_room": "当前房间",
+                "hall": "大厅"
+            },
+            "room_list": {
+                "room_status": {
+                    "not_activated": "等待房主",
+                    "open": "已开启",
+                    "close": "已关闭",
+                    "playing": "进行中",
+                    "ended": "已结束"
+                },
+                "blinds": "盲注",
+                "players": "玩家",
+                "Min Buy-In": "最低买入"
+            }
+        },
+        "user": {
+            "tab_bar": {
+                "personal_assets": "个人资产",
+                "career": "生涯",
+                "backpack": "背包"
+            }
+        },
+        "Deposit": {
+            "title": "充值",
+            "crypto": "加密货币",
+            "fiat": "法币",
+            "currencyTitle": "货币",
+            "networkTitle": "网络",
+            "addressTitle": "充值地址",
+            "USDT": {},
+            "TON": {}
+        },
+        "Career": {
+            "title": "生涯",
+            "totalProfitlabel": "总盈亏"
+        },
+        "GameAnalysis": {
+            "title": "对局分析"
+        },
+        "Withdrawal": {
+            "title": "提现",
+            "currencyText": "货币",
+            "networkText": "网络",
+            "addressText": "提现地址",
+            "amountText": "提现数量"
+        },
+        "Message": {
+            "title": "消息"
+        },
+        "MessageDetails": {
+            "title": "消息详情"
+        },
+        "CustomerService": {
+            "title": "客服"
+        },
+        "TradeRecord": {
+            "title": "交易历史",
+            "withdrawal": "提现",
+            "deposit": "充值"
+        }
+    },
+    "PLAYER_LEFT_TAG": "离开",
+    "NEED_STAND_UP_FIRST": "你已坐下，如需更换座位请先站起",
+    "NEED_SIT_DOWN_FIRST": "你还没有坐下。",
+    "ROOM_NOT_FOUND": "房间不存在或已解散",
+    "ROOM_ALREADY_JOINED": "你已在该房间中",
+    "ROOM_IS_FULL": "房间人数已满",
+    "PLAYER_NOT_IN_ROOM": "你不在该房间内",
+    "SEAT_OCCUPIED": "该座位已被占用",
+    "SEAT_INDEX_INVALID": "座位号不在可选范围内，请重新选择空位。",
+    "WS_MESSAGE_INVALID": "消息格式无效",
+    "GAME_CREATE_ROOM_FAILED": "创建房间失败，请稍后再试",
+    "ONLY_OWNER_CAN_START": "只能房主点击开始",
+    "NOT_ENOUGH_PLAYERS_TO_START": "至少两位玩家坐下后才能开始",
+    "ALL_SEATED_MUST_READY": "坐下的玩家都准备后才能开始",
+    "GAME_START_COUNTDOWN": "人数够了，30秒后开局",
+    "READY": "准备",
+    "CANCEL_READY": "取消准备",
+    "GAME_ACTION_LOCKED": "这局已经开始，先打完这手",
+    "GAME_PLAYING_LEAVE": "这局已经开始，是否确认离开？",
+    "LEAVE_COUNTDOWN": "离开倒计时",
+    "STAGE_PREFLOP": "翻牌前",
+    "STAGE_FLOP": "翻牌圈",
+    "STAGE_TURN": "转牌圈",
+    "STAGE_RIVER": "河牌圈",
+    "STAGE_SHOWDOWN": "摊牌",
+    "HAND_CATEGORY_STRAIGHT_FLUSH": "同花顺",
+    "HAND_CATEGORY_FOUR_OF_A_KIND": "四条",
+    "HAND_CATEGORY_FULL_HOUSE": "葫芦",
+    "HAND_CATEGORY_FLUSH": "同花",
+    "HAND_CATEGORY_STRAIGHT": "顺子",
+    "HAND_CATEGORY_THREE_OF_A_KIND": "三条",
+    "HAND_CATEGORY_TWO_PAIR": "两对",
+    "HAND_CATEGORY_PAIR": "一对",
+    "HAND_CATEGORY_HIGH_CARD": "高牌",
+    "BET_FOLD": "弃牌",
+    "BET_CHECK": "过牌",
+    "BET_CALL": "跟注",
+    "BET_RAISE": "加注",
+    "BET_RAISE_MIN": "最小",
+    "BET_RAISE_2BB": "2BB",
+    "BET_RAISE_HALF_POT": "½池",
+    "BET_RAISE_POT": "满池",
+    "BET_RAISE_CUSTOM": "自定义",
+    "BET_RAISE_CUSTOM_TITLE": "自定义加注",
+    "BET_RAISE_CUSTOM_LABEL": "本街目标总下注",
+    "BET_RAISE_CUSTOM_PLACEHOLDER": "输入整数筹码",
+    "BET_RAISE_CUSTOM_HELP": "即你本街累计下注到的总额（含已下部分），须不小于合法最小加注；服务端会再次校验。",
+    "BET_ALL_IN": "全下",
+    "BET_ACTION_FAILED": "操作失败，请重试",
+    "BUY_IN_TITLE": "买入筹码",
+    "BUY_IN_PROMPT": "请输入买入金额（桌上筹码从账外扣除）",
+    "BUY_IN_CONFIRM_DEFAULT": "将以 {amount} 筹码坐下，是否确认？",
+    "BUY_IN_FAILED": "买入失败，请检查余额与最小/最大买入",
+    "BUY_IN_NO_BALANCE": "账外余额不足，无法买入",
+    "BUY_IN_OFF_TABLE_EXPLAIN": "说明：界面上的「筹码」多为桌上筹码；买入只从账外钱包扣款。若资金都在桌上，请先点「站起」把筹码退回账外，再坐下或追加买入。",
+    "BUY_IN_NEED_STAND_FIRST": "您桌上仍有筹码，但账外余额为 0，无法追加买入。请先点「站起」将筹码退回账外，再坐下或买入。",
+    "READY_NEED_CHIPS": "桌上筹码不足或未达最小买入，无法准备。请先买入或站起后重新坐下。",
+    "READY_FAILED": "准备失败，请稍后重试",
+    "LAST_HAND_TITLE": "上一手结算",
+    "LAST_HAND_HOLE_CARDS": "底牌 {cards}",
+    "LAST_HAND_POT": "总底池：{amount}",
+    "LAST_HAND_NO_PAYOUT": "无派奖记录",
+    "LAST_HAND_RAKE": "房主抽佣（已入账账外）：{amount}",
+    "LAST_HAND_LAYERS_HEADER": "— 分层派奖 —",
+    "LAST_HAND_LAYER_MAIN": "主池 · 派奖 {amount}",
+    "LAST_HAND_LAYER_SIDE": "边池 {n} · 派奖 {amount}",
+    "ROOM_ENDED_MESSAGE": "房间局数已满，已结束并退回筹码。",
+    "PLAYER_BUSY": "您处于忙碌状态，本手由系统自动过牌/弃牌",
+    "PLAYER_BUSY_TAG": "忙碌",
+    "NOT_YOUR_TURN": "还没轮到你",
+    "INVALID_ACTION": "无效操作",
+    "CANNOT_CHECK": "不能过牌",
+    "CANNOT_RAISE": "筹码不足或无法加注",
+    "game": {
+        "error": {
+            "not_found": "房间不存在或已解散"
+        },
+        "room_info": {
+            "title": "房间信息",
+            "owner_left_tag": "离开",
+            "room_type": {
+                "title": "房间类型",
+                "private": "私密房间",
+                "public": "公开房间"
+            },
+            "room_number": {
+                "title": "房间号"
+            },
+            "owner": {
+                "title": "房主"
+            },
+            "players": {
+                "title": "房间内玩家"
+            }
+        }
+    },
+    "TexasPoker": "德州",
+    "prompt": {
+        "sb": "小盲注位",
+        "bb": "大盲注位",
+        "postSb": "下小盲注",
+        "postBb": "下大盲注",
+        "ante": "前注金额",
+        "check": "过牌",
+        "call": "跟注",
+        "raise": "加注",
+        "allIn": "全下",
+        "fold": "弃牌"
+    },
+    "Bet": {
+        "Fold": "弃牌",
+        "Check": "过牌",
+        "Call": "跟注",
+        "Raise": "加注",
+        "AllIn": "全下",
+        "ShowDown": "摊牌"
+    }
+}

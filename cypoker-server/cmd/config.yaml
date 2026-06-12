@@ -1,0 +1,97 @@
+# 是否开启调试模式
+debug: true
+
+# 监听端口
+port: 8000
+
+# 日志配置
+log:
+  # 是否保存日志
+  save: false
+  # 日志保存路径
+  save_path: ./logs
+  # 日志最大大小（KB，单日单分片；约 30MB）
+  max_size: 30720
+  # 日志最大保存天数
+  max_age: 7
+
+# SQL 日志配置
+sql_log:
+  # 是否开启 SQL 日志
+  enable: false
+  # 是否开启慢查询日志
+  slow_query: false
+  # 慢查询阈值（毫秒）
+  slow_query_threshold: 400
+
+# 跨域配置
+cors:
+  # 允许的域名
+  allowed_origins:
+    - "*"
+  # 允许的请求方法
+  allowed_methods:
+    - "*"
+  # 允许的请求头
+  allowed_headers:
+    - "*"
+  # 是否允许凭证
+  allow_credentials: true
+  # 最大缓存时间（秒）
+  max_age: 86400
+  # 暴露的响应头
+  expose_headers:
+    - "*"
+
+# 国际化配置
+i18n:
+  # 语言文件路径
+  path: ./lang
+  # 默认语言
+  default_lang: zh-CN
+
+# 限流配置
+# TODO: 限流配置
+# rate_limit:
+#   # 是否开启限流
+#   enabled: true
+#   # 限流策略
+#   strategy:
+#     - type: ip
+#       limit: 100
+#       duration: 60
+#     - type: api
+#       limit: 100
+#       duration: 60
+
+# 数据库配置
+database:
+  - name: default
+    host: 192.168.1.64
+    port: 3306
+    user: root
+    password: 5iFK88a1J83VVPZ
+    db_name: cypoker
+    prefix: cypoker_
+
+# Redis 配置
+redis:
+  - name: default
+    host: 192.168.1.64
+    port: 6379
+    password:
+    db_name: 0
+    prefix: "cypoker:"
+
+jwt:
+  # 密钥
+  secret: "******"
+  # 过期时间（秒）
+  expires_in: 259200
+
+# 自定义配置
+# 通过 conf.Get("path") 获取值
+telegram:
+  bot_token: "8757661129:AAH0msJDNIc7clYlE3KbkKC85JOJpW6DQD8"
+  # Telegram initData 允许的最大时效（秒）；开发可调大，生产建议 600~1800
+  init_data_max_age_sec: 86400

@@ -1,0 +1,27 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 0,
+  "workspaces": {
+    "": {
+      "name": "CYPoker-client",
+      "dependencies": {
+        "@fingerprintjs/fingerprintjs": "^5.1.0",
+        "node-forge": "^1.3.3",
+      },
+      "devDependencies": {
+        "@types/node-forge": "^1.3.14",
+      },
+    },
+  },
+  "packages": {
+    "@fingerprintjs/fingerprintjs": ["@fingerprintjs/fingerprintjs@5.1.0", "", {}, "sha512-8h/CscV3xQ4KSLyXbSK8YFpZ5AaezzHfkl82mn8NJIEWNi1zLfbZSIu7MGGtx4pqa10oejhEk4u0MNutuE63Fw=="],
+
+    "@types/node": ["@types/node@25.3.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-DpzbrH7wIcBaJibpKo9nnSQL0MTRdnWttGyE5haGwK86xgMOkFLp7vEyfQPGLOJh5wNYiJ3V9PmUMDhV9u8kkQ=="],
+
+    "@types/node-forge": ["@types/node-forge@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-mhVF2BnD4BO+jtOp7z1CdzaK4mbuK0LLQYAvdOLqHTavxFNq4zA1EmYkpnFjP8HOUzedfQkRnp0E2ulSAYSzAw=="],
+
+    "node-forge": ["node-forge@1.3.3", "", {}, "sha512-rLvcdSyRCyouf6jcOIPe/BgwG/d7hKjzMKOas33/pHEr6gbq18IK9zV7DiPvzsz0oBJPme6qr6H6kGZuI9/DZg=="],
+
+    "undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "ver": "1.2.0",
+  "importer": "directory",
+  "imported": true,
+  "uuid": "b14c233e-cb64-4fdc-a518-4d1ede12a422",
+  "files": [],
+  "subMetas": {},
+  "userData": {
+    "bundleName": "prefabs",
+    "isBundle": true,
+    "bundleFilterConfig": []
+  }
+}

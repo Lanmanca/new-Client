@@ -1,0 +1,98 @@
+[
+  {
+    "__type__": "cc.AnimationClip",
+    "_name": "loading",
+    "_objFlags": 0,
+    "__editorExtras__": {
+      "embeddedPlayerGroups": []
+    },
+    "_native": "",
+    "sample": 45,
+    "speed": 0.4,
+    "wrapMode": 2,
+    "enableTrsBlending": false,
+    "_duration": 0.1111111111111111,
+    "_hash": 500763545,
+    "_tracks": [
+      {
+        "__id__": 1
+      }
+    ],
+    "_exoticAnimation": null,
+    "_events": [],
+    "_embeddedPlayers": [],
+    "_additiveSettings": {
+      "__id__": 6
+    },
+    "_auxiliaryCurveEntries": []
+  },
+  {
+    "__type__": "cc.animation.ObjectTrack",
+    "_binding": {
+      "__type__": "cc.animation.TrackBinding",
+      "path": {
+        "__id__": 2
+      },
+      "proxy": null
+    },
+    "_channel": {
+      "__id__": 4
+    }
+  },
+  {
+    "__type__": "cc.animation.TrackPath",
+    "_paths": [
+      {
+        "__id__": 3
+      },
+      "spriteFrame"
+    ]
+  },
+  {
+    "__type__": "cc.animation.ComponentPath",
+    "component": "cc.Sprite"
+  },
+  {
+    "__type__": "cc.animation.Channel",
+    "_curve": {
+      "__id__": 5
+    }
+  },
+  {
+    "__type__": "cc.ObjectCurve",
+    "_times": [
+      0,
+      0.022222222222222223,
+      0.044444444444444446,
+      0.06666666666666667,
+      0.08888888888888889
+    ],
+    "_values": [
+      {
+        "__uuid__": "07298dcd-e0aa-4276-b0ea-e377cba86e4c@cd1c0",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "07298dcd-e0aa-4276-b0ea-e377cba86e4c@a66ba",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "07298dcd-e0aa-4276-b0ea-e377cba86e4c@e69c1",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "07298dcd-e0aa-4276-b0ea-e377cba86e4c@2767f",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "07298dcd-e0aa-4276-b0ea-e377cba86e4c@77b3a",
+        "__expectedType__": "cc.SpriteFrame"
+      }
+    ]
+  },
+  {
+    "__type__": "cc.AnimationClipAdditiveSettings",
+    "enabled": false,
+    "refClip": null
+  }
+]

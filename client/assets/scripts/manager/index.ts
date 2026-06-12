@@ -1,0 +1,14 @@
+export { animationManager } from './AnimationManager';
+export { APIManager } from './APIManager';
+export { APPManager } from './APPManager';
+export { eventManager } from './EventManager';
+export { i18n } from './I18nManager';
+export { imageManager } from './ImageManager';
+export { ResManager } from './ResManager';
+export { roomManager } from './RoomManager';
+export { roomSessionService } from './RoomSessionService';
+export { roomSessionStore } from './RoomSessionStore';
+export { stateManager } from './StateManager';
+export { taskManager } from './TaskManager';
+export { uiManager } from './UIManager';
+export { userManager } from './UserManager';
