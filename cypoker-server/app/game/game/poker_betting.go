@@ -918,21 +918,19 @@ func applyActionTimeout(room *Room, now int64) bool {
 	}
 	seat := room.Players[pi].SeatIndex
 	isOffline := room.Players[pi].Offline
-	fmt.Printf("[timeout] fired user=%s seat=%d offline=%v currentBet=%.2f maxStreet=%.2f wallet=%.2f\n",
-		uid, seat, isOffline, room.Players[pi].CurrentBet, room.BettingMaxStreet, room.Players[pi].Wallet)
 
-	// 能过牌就过牌（在线/离线玩家通用）
-	if room.Players[pi].CurrentBet+chipEps >= room.BettingMaxStreet {
-		fmt.Printf("[timeout] auto-CHECK user=%s seat=%d offline=%v\n", uid, seat, isOffline)
-		room.BettingActed[seat] = true
-		recordLastAction(room, uid, "check", 0)
-		advanceBettingTurn(room, now, seat)
-	} else if isOffline {
-		// 离线玩家：不能过牌时直接弃牌（不自动跟注，避免离线玩家被动消耗筹码）
-		fmt.Printf("[timeout] auto-FOLD offline user=%s seat=%d (cannot check, no auto-call)\n", uid, seat)
+	if isOffline {
+		// 离线玩家：轮到即弃牌，不再过牌或跟注，该玩家本手牌立即出局。
+		fmt.Printf("[timeout] auto-FOLD offline user=%s seat=%d (always fold on turn)\n", uid, seat)
 		room.Players[pi].Folded = true
 		room.BettingActed[seat] = true
 		recordLastAction(room, uid, "fold", 0)
+		advanceBettingTurn(room, now, seat)
+	} else if room.Players[pi].CurrentBet+chipEps >= room.BettingMaxStreet {
+		// 在线玩家：能过牌就过牌
+		fmt.Printf("[timeout] auto-CHECK online user=%s seat=%d\n", uid, seat)
+		room.BettingActed[seat] = true
+		recordLastAction(room, uid, "check", 0)
 		advanceBettingTurn(room, now, seat)
 	} else {
 		// 在线玩家超时：正常跟注/全下/弃牌
