@@ -65,6 +65,16 @@ func buildDefaultRound(in *CreateRoomReq) RoundState {
 
 func toRoomStateResp(room *Room) RoomStateResp {
 	syncAccountBalancesFromDB(room)
+	// 深拷贝 Players 切片：防止响应体与 room.Players 共享底层数组，
+	// 后续对 room 的修改（如 endHandResetRoom 清除手牌）不会污染已构建的响应。
+	players := make([]PlayerSeat, len(room.Players))
+	for i, p := range room.Players {
+		cp := p
+		if len(p.Cards) > 0 {
+			cp.Cards = append([]int(nil), p.Cards...)
+		}
+		players[i] = cp
+	}
 	return RoomStateResp{
 		RoomNumber:      room.RoomNumber,
 		Owner:           room.OwnerUserID,
@@ -84,7 +94,7 @@ func toRoomStateResp(room *Room) RoomStateResp {
 		AllowWatch:      room.AllowWatch,
 		MaxRounds:       room.MaxRounds,
 		CreatedAt:       room.CreatedAt,
-		Players:         room.Players,
+		Players:         players,
 		Watchers:        room.Watchers,
 		Round:           room.Round,
 	}

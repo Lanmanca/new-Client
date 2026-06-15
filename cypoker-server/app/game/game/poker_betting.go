@@ -499,6 +499,12 @@ func bettingStreetComplete(room *Room) bool {
 		if !playerInHand(p) || p.Folded {
 			continue
 		}
+		// 离线玩家的行动由 applyActionTimeout 单独处理（轮到其时 5 秒超时自动过牌/弃牌），
+		// 此处跳过，防止离线玩家携带上一街的 CurrentBet 和重置后的 BettingActed
+		// 阻塞本街完成判定，导致回合在在线与离线玩家之间无限震荡。
+		if p.Offline {
+			continue
+		}
 		matched := p.CurrentBet+chipEps >= room.BettingMaxStreet
 		if !matched {
 			if p.Wallet >= walletDustEps {
