@@ -695,22 +695,30 @@ func (r *Repository) ApplyPlayerEvent(roomNumber, userID, event string, data map
 			isCurrentTurn := sameUserID(room.Round.Action.CurrentTurnUserID, userID)
 
 			if isCurrentTurn {
-				// 当前回合玩家离开：立即视为弃牌，推进到下一位
-				room.Players[playerIdx].Folded = true
-				room.BettingActed[seatBefore] = true
-				recordLastAction(room, userID, "fold", 0)
+				// 当前回合玩家离开：
+				// - 剩余读秒 > 5s → 缩短到 5s，等待超时后由 applyActionTimeout 自动处理
+				// - 剩余读秒 ≤ 5s → 立即弃牌，推进到下一位
+				remaining := room.Round.Action.DeadlineAt - now
+				if remaining > 5 {
+					room.Round.Action.DeadlineAt = now + 5
+					fmt.Printf("[game.leave] current-turn user=%s seat=%d deadline shortened to 5s (was %ds)\n",
+						userID, seatBefore, remaining)
+				} else {
+					room.Players[playerIdx].Folded = true
+					room.BettingActed[seatBefore] = true
+					recordLastAction(room, userID, "fold", 0)
 
-				fmt.Printf("[game.leave] current-turn auto-fold user=%s seat=%d\n",
-					userID, seatBefore)
+					fmt.Printf("[game.leave] current-turn auto-fold user=%s seat=%d (remaining=%ds)\n",
+						userID, seatBefore, remaining)
 
-				advanceBettingTurn(room, now, seatBefore)
+					advanceBettingTurn(room, now, seatBefore)
 
-				// 弃牌可能导致整手结束（如 2 人局当前玩家离开弃牌 → fold_win）
-				// 必须和 "action" case 一样构建 gameover 事件，否则客户端收不到结算
-				if room.Status != RoomStatusPlaying && room.Round.LastHandKind != "" {
-					fmt.Printf("[game.leave] hand ended via auto-fold, kind=%s\n", room.Round.LastHandKind)
-					events = append(events, buildHandEndEvents(room, now)...)
-					handEnded = true
+					// 弃牌可能导致整手结束（如 2 人局当前玩家离开弃牌 → fold_win）
+					if room.Status != RoomStatusPlaying && room.Round.LastHandKind != "" {
+						fmt.Printf("[game.leave] hand ended via auto-fold, kind=%s\n", room.Round.LastHandKind)
+						events = append(events, buildHandEndEvents(room, now)...)
+						handEnded = true
+					}
 				}
 			} else {
 				// 非当前回合玩家离开：仅标记离线，不弃牌。
