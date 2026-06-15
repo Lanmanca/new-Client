@@ -239,25 +239,35 @@ func needsToActSeat(room *Room, seat int) bool {
 	}
 	p := &room.Players[idx]
 	if p.Folded || !playerInHand(p) {
+		fmt.Printf("[needsToAct] seat=%d → false (folded=%v inHand=%v)\n", seat, p.Folded, playerInHand(p))
 		return false
 	}
 	if p.AllInHand {
+		fmt.Printf("[needsToAct] seat=%d → false (allIn)\n", seat)
 		return false
 	}
-	// 与 postChip 归一一致：极小额视为已全下，不再参与下注轮
 	noStack := p.Wallet <= walletDustEps
 	if noStack && p.CurrentBet+chipEps < room.BettingMaxStreet {
+		fmt.Printf("[needsToAct] seat=%d → false (noStack + unmatched) wallet=%.2f\n", seat, p.Wallet)
 		return false
 	}
 	if p.CurrentBet+chipEps >= room.BettingMaxStreet {
 		if noStack {
+			fmt.Printf("[needsToAct] seat=%d → false (matched + noStack)\n", seat)
 			return false
 		}
-		return !room.BettingActed[seat]
+		acted := room.BettingActed[seat]
+		fmt.Printf("[needsToAct] seat=%d → %v (matched: bet=%.2f max=%.2f acted=%v)\n",
+			seat, !acted, p.CurrentBet, room.BettingMaxStreet, acted)
+		return !acted
 	}
 	if noStack {
+		fmt.Printf("[needsToAct] seat=%d → false (noStack + unmatched) wallet=%.2f bet=%.2f max=%.2f\n",
+			seat, p.Wallet, p.CurrentBet, room.BettingMaxStreet)
 		return false
 	}
+	fmt.Printf("[needsToAct] seat=%d → true (unmatched: bet=%.2f max=%.2f wallet=%.2f)\n",
+		seat, p.CurrentBet, room.BettingMaxStreet, p.Wallet)
 	return true
 }
 
@@ -463,28 +473,39 @@ func appendHandAction(room *Room, userID, act string, amt float64) {
 }
 
 func advanceBettingTurn(room *Room, now int64, afterSeat int) {
+	fmt.Printf("[advanceBettingTurn] afterSeat=%d activeNotFolded=%d stage=%s\n",
+		afterSeat, countActiveNotFolded(room), room.Round.Stage)
 	if countActiveNotFolded(room) <= 1 {
+		fmt.Printf("[advanceBettingTurn] only 1 active → settleFoldWin\n")
 		settleFoldWin(room, now)
 		return
 	}
 	if bettingStreetComplete(room) {
+		fmt.Printf("[advanceBettingTurn] street complete → advanceStreetOrFinish\n")
 		advanceStreetOrFinish(room, now)
 		return
 	}
 	next := findNextActorSeat(room, afterSeat)
+	fmt.Printf("[advanceBettingTurn] first candidate next=%d\n", next)
 	// 防御：若状态异常把无需行动位当作下家，跳过直到真需行动或无人可动
 	for guard := 0; next > 0 && !needsToActSeat(room, next) && guard < len(room.Players)+3; guard++ {
+		fmt.Printf("[advanceBettingTurn] skip seat=%d (no act needed), searching next\n", next)
 		next = findNextActorSeat(room, next)
 	}
 	if next <= 0 {
 		if bettingStreetComplete(room) {
+			fmt.Printf("[advanceBettingTurn] no next + street complete → advanceStreetOrFinish\n")
 			advanceStreetOrFinish(room, now)
 			return
 		}
+		fmt.Printf("[advanceBettingTurn] no next actor found, clearing turn\n")
 		room.Round.Action.CurrentTurnUserID = ""
 		room.Round.Action.DeadlineAt = 0
 		return
 	}
+	fmt.Printf("[advanceBettingTurn] setting turn to seat=%d user=%s offline=%v\n",
+		next, room.Players[indexBySeat(room, next)].UserID,
+		room.Players[indexBySeat(room, next)].Offline)
 	setActionTurn(room, next, now)
 }
 
