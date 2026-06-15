@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"sort"
 )
@@ -275,8 +276,12 @@ func setActionTurn(room *Room, seat int, now int64) {
 	// 离线玩家：5 秒后触发自动操作（优先过牌，不能过牌则弃牌）
 	if room.Players[idx].Offline {
 		room.Round.Action.DeadlineAt = now + 5
+		fmt.Printf("[setActionTurn] OFFLINE player user=%s seat=%d deadline=now+5\n",
+			room.Players[idx].UserID, seat)
 		return
 	}
+	fmt.Printf("[setActionTurn] ONLINE player user=%s seat=%d timeout=%ds\n",
+		room.Players[idx].UserID, seat, room.ActionTimeout)
 	if room.ActionTimeout > 0 {
 		room.Round.Action.DeadlineAt = now + int64(room.ActionTimeout)
 	} else {
@@ -905,6 +910,7 @@ func applyActionTimeout(room *Room, now int64) bool {
 	// 如果当前行动玩家已经弃牌（如离开时被立即弃牌），跳过该玩家
 	if room.Players[pi].Folded {
 		seat := room.Players[pi].SeatIndex
+		fmt.Printf("[timeout] player already folded, skip user=%s seat=%d\n", uid, seat)
 		room.Round.Action.CurrentTurnUserID = ""
 		room.Round.Action.DeadlineAt = 0
 		advanceBettingTurn(room, now, seat)
@@ -912,14 +918,18 @@ func applyActionTimeout(room *Room, now int64) bool {
 	}
 	seat := room.Players[pi].SeatIndex
 	isOffline := room.Players[pi].Offline
+	fmt.Printf("[timeout] fired user=%s seat=%d offline=%v currentBet=%.2f maxStreet=%.2f wallet=%.2f\n",
+		uid, seat, isOffline, room.Players[pi].CurrentBet, room.BettingMaxStreet, room.Players[pi].Wallet)
 
 	// 能过牌就过牌（在线/离线玩家通用）
 	if room.Players[pi].CurrentBet+chipEps >= room.BettingMaxStreet {
+		fmt.Printf("[timeout] auto-CHECK user=%s seat=%d offline=%v\n", uid, seat, isOffline)
 		room.BettingActed[seat] = true
 		recordLastAction(room, uid, "check", 0)
 		advanceBettingTurn(room, now, seat)
 	} else if isOffline {
 		// 离线玩家：不能过牌时直接弃牌（不自动跟注，避免离线玩家被动消耗筹码）
+		fmt.Printf("[timeout] auto-FOLD offline user=%s seat=%d (cannot check, no auto-call)\n", uid, seat)
 		room.Players[pi].Folded = true
 		room.BettingActed[seat] = true
 		recordLastAction(room, uid, "fold", 0)
@@ -937,9 +947,11 @@ func applyActionTimeout(room *Room, now int64) bool {
 			if pay+chipEps >= preW-chipEps {
 				act = "all_in"
 			}
+			fmt.Printf("[timeout] auto-%s online user=%s seat=%d pay=%.2f\n", act, uid, seat, pay)
 			recordLastAction(room, uid, act, pay)
 			advanceBettingTurn(room, now, seat)
 		} else {
+			fmt.Printf("[timeout] auto-FOLD online user=%s seat=%d (no chips to call)\n", uid, seat)
 			room.Players[pi].Folded = true
 			room.BettingActed[seat] = true
 			recordLastAction(room, uid, "fold", 0)
