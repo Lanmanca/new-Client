@@ -688,35 +688,37 @@ func (r *Repository) ApplyPlayerEvent(roomNumber, userID, event string, data map
 		} else {
 			room.Players = append(room.Players[:playerIdx], room.Players[playerIdx+1:]...)
 		}
-		// 游戏进行中 + 已入座：立即视为弃牌，跳过该玩家的回合
+		// 游戏进行中离开：区分当前回合玩家与非当前回合玩家
 		if room.Status == RoomStatusPlaying && playerIdx >= 0 &&
 			playerIdx < len(room.Players) && room.Players[playerIdx].SeatIndex > 0 {
 			seatBefore := room.Players[playerIdx].SeatIndex
 			isCurrentTurn := sameUserID(room.Round.Action.CurrentTurnUserID, userID)
 
-			room.Players[playerIdx].Folded = true
-			room.BettingActed[seatBefore] = true
-			recordLastAction(room, userID, "fold", 0)
-
-			fmt.Printf("[game.leave] auto-fold user=%s seat=%d isCurrentTurn=%v\n",
-				userID, seatBefore, isCurrentTurn)
-
 			if isCurrentTurn {
-				// 该玩家是当前行动玩家：立即推进到下一位
-				advanceBettingTurn(room, now, seatBefore)
-			} else if bettingStreetComplete(room) {
-				// 该玩家不是当前行动玩家，但弃牌使本街所有剩余玩家都已行动完毕
-				// 立即推进（进下一条或直接摊牌），避免依赖定时器逐秒 cascade
-				fmt.Printf("[game.leave] fold made street complete, advancing\n")
-				advanceStreetOrFinish(room, now)
-			}
+				// 当前回合玩家离开：立即视为弃牌，推进到下一位
+				room.Players[playerIdx].Folded = true
+				room.BettingActed[seatBefore] = true
+				recordLastAction(room, userID, "fold", 0)
 
-			// 弃牌可能导致整手结束（如 2 人局最后一人弃牌 → fold_win）
-			// 必须和 "action" case 一样构建 gameover 事件，否则客户端收不到结算
-			if room.Status != RoomStatusPlaying && room.Round.LastHandKind != "" {
-				fmt.Printf("[game.leave] hand ended via auto-fold, kind=%s\n", room.Round.LastHandKind)
-				events = append(events, buildHandEndEvents(room, now)...)
-				handEnded = true
+				fmt.Printf("[game.leave] current-turn auto-fold user=%s seat=%d\n",
+					userID, seatBefore)
+
+				advanceBettingTurn(room, now, seatBefore)
+
+				// 弃牌可能导致整手结束（如 2 人局当前玩家离开弃牌 → fold_win）
+				// 必须和 "action" case 一样构建 gameover 事件，否则客户端收不到结算
+				if room.Status != RoomStatusPlaying && room.Round.LastHandKind != "" {
+					fmt.Printf("[game.leave] hand ended via auto-fold, kind=%s\n", room.Round.LastHandKind)
+					events = append(events, buildHandEndEvents(room, now)...)
+					handEnded = true
+				}
+			} else {
+				// 非当前回合玩家离开：仅标记离线，不弃牌。
+				// 轮到该玩家时，由 setActionTurn 设定 5 秒超时，
+				// applyActionTimeout 自动处理（优先过牌 > 弃牌），
+				// 确保离开玩家以最小损失参与完本手牌。
+				fmt.Printf("[game.leave] non-current-turn user=%s seat=%d marked offline, deferred auto-action\n",
+					userID, seatBefore)
 			}
 		}
 	default:
