@@ -525,12 +525,9 @@ func bettingStreetComplete(room *Room) bool {
 		if !playerInHand(p) || p.Folded {
 			continue
 		}
-		// 离线玩家的行动由 applyActionTimeout 单独处理（轮到其时 5 秒超时自动过牌/弃牌），
-		// 此处跳过，防止离线玩家携带上一街的 CurrentBet 和重置后的 BettingActed
-		// 阻塞本街完成判定，导致回合在在线与离线玩家之间无限震荡。
-		if p.Offline {
-			continue
-		}
+		// 未弃牌且在手的玩家：匹配了当前最高注但尚未行动 → 阻止街道完成，
+		// 确保 advanceBettingTurn → findNextActorSeat 把回合安排到该玩家。
+		// 离线玩家轮到后由 setActionTurn 设定 5s 倒计时，applyActionTimeout 自动弃牌。
 		matched := p.CurrentBet+chipEps >= room.BettingMaxStreet
 		if !matched {
 			if p.Wallet >= walletDustEps {
@@ -633,13 +630,13 @@ func firstPostFlopActor(room *Room) int {
 		}
 		return findNextActorSeat(room, order[0])
 	}
-	// 单挑：翻牌后由大盲（非庄）先行动，庄后行动
+	// 单挑：翻牌后由庄（BTN）先行动，BB 后行动（标准德扑 heads-up 规则）
 	if len(order) == 2 {
-		bb := order[1]
-		if needsToActSeat(room, bb) {
-			return bb
+		btn := order[0]
+		if needsToActSeat(room, btn) {
+			return btn
 		}
-		return findNextActorSeat(room, bb)
+		return findNextActorSeat(room, btn)
 	}
 	return order[0]
 }
