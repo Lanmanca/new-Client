@@ -1,7 +1,7 @@
 import { imageManager } from '@/manager';
 import { noConcurrent } from '@/utils';
 import { loadRemoteSpriteFrame } from '@/utils/loadRemoteSpriteFrame';
-import { _decorator, Color, Component, isValid, Label, Layout, Node, Size, Sprite, tween, UITransform, Vec3 } from 'cc';
+import { _decorator, Color, Component, isValid, Label, Node, Size, Sprite, tween, UITransform, Vec3 } from 'cc';
 import { Button } from './Button';
 import { Countdown } from './CountDown';
 const { ccclass, property } = _decorator;
@@ -264,11 +264,10 @@ export class PokerPile extends Component {
 
     /**
      * 隐藏当前玩家名称 内容节点
+     * 保持 Layout 始终为 VERTICAL 不动，仅切换子节点 active。
+     * Layout 会自动跳过 inactive 子节点，避免关闭再开启布局导致子节点位置漂移。
      */
     public hideContainer() {
-        this.node.getComponent(Layout).type = Layout.Type.NONE;
-        this.node.getComponent(UITransform).height = 100;
-        this.node.getComponent(UITransform).width = 100;
         this.nameNode.active = false;
         this.containerNode.active = false;
     }
@@ -277,9 +276,6 @@ export class PokerPile extends Component {
      * 恢复当前玩家名称 内容节点
      */
     public restoreContainer() {
-        this.node.getComponent(Layout).type = Layout.Type.VERTICAL;
-        this.node.getComponent(Layout).resizeMode = Layout.ResizeMode.CONTAINER;
-        this.node.getComponent(Layout).spacingY = 10;
         this.nameNode.active = true;
         this.containerNode.active = true;
     }
@@ -359,7 +355,25 @@ export class PokerPile extends Component {
      */
     public setChip(chip: number | null) {
         if (!this.playerChip) return;
-        const chipLabel = this.playerChip.getChildByName('funds').getComponent(Label);
-        chipLabel.string = chip == null ? '' : `$${chip.toString()}`;
+        const text = chip == null ? '' : `$${chip.toString()}`;
+
+        // 1. 先尝试 playerChip 自身是否有 Label
+        const selfLabel = this.playerChip.getComponent(Label);
+        if (selfLabel) {
+            selfLabel.string = text;
+            return;
+        }
+
+        // 2. 遍历所有子节点，找到第一个带 Label 的
+        for (const child of this.playerChip.children) {
+            const label = child.getComponent(Label);
+            if (label) {
+                label.string = text;
+                return;
+            }
+        }
+
+        console.warn('[setChip] playerChip 节点上及子节点均未找到 Label 组件',
+            'children:', this.playerChip.children.map(c => c.name));
     }
 }
