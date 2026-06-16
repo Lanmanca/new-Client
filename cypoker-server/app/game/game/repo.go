@@ -219,6 +219,8 @@ func (r *Repository) JoinRoom(userID, roomNumber string) (*JoinRoomResp, error) 
 					timeout = 30
 				}
 				room.Round.Action.DeadlineAt = now + timeout
+				// 重连恢复回合权：清除可能因超时自动设置的弃牌标记
+				p.Folded = false
 			}
 		} else {
 			// 同账号再次 join_room（异常断线后仅 HTTP 重进等）：幂等成功，勿返回 ROOM_ALREADY_JOINED
