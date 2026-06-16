@@ -373,7 +373,17 @@ export class PokerController extends Component {
         this._enteredSceneWithPlaying = this.room?.status === RoomStatus.Playing;
         this._lastKnownRoomStatus = this.room?.status || '';
 
-        this.startGameNode.on(Node.EventType.TOUCH_END, this.clickStartGame, this);
+        const startGameNodeText = this.startGameNode.getChildByName('Button');
+        if (startGameNodeText) {
+            const btn = startGameNodeText.getComponent(Button);
+            if (btn) {
+                btn.label = i18n.t('START_GAME') || '开始游戏';
+            }
+            // 事件绑在 Button 子节点上，避免 Button 拦截触摸导致父节点 TOUCH_END 不触发
+            startGameNodeText.on(Node.EventType.TOUCH_END, this.clickStartGame, this);
+        } else {
+            this.startGameNode.on(Node.EventType.TOUCH_END, this.clickStartGame, this);
+        }
 
         // 设置牌桌背景
         if (this.tableBackgroundNode && isValid(this.tableBackgroundNode.node)) {
@@ -544,6 +554,8 @@ export class PokerController extends Component {
                         this._lastKnownRoomStatus = this.room?.status || '';
                         this._hasReceivedRoomState = true;
                     }
+                    // 重置操作锁，防止离开时未完成的锁操作阻塞重连后的下注界面
+                    this._betActionLocked = false;
                     // 强制完整重建对局视图（手牌、公共牌、底池等）
                     this._gameStarted = false;
                     this._shouldRestorePlayingView = false;
@@ -1650,6 +1662,7 @@ export class PokerController extends Component {
         for (let i = 0; i < this._seatPiles.length; i++) {
             const pile = this._seatPiles[i];
             pile?.hideActionCountdown();
+            pile?.hideSeatName();
             // 有人坐着的座位隐藏状态文字，空座位显示"空"
             if (occupiedSeats.has(i + 1)) {
                 pile?.hideSeatStatus();

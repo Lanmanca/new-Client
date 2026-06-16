@@ -212,6 +212,14 @@ func (r *Repository) JoinRoom(userID, roomNumber string) (*JoinRoomResp, error) 
 			} else {
 				p.Status = PlayerStatusWaiting
 			}
+			// 重连时如果正是该玩家的回合，将倒计时延长到正常操作时间
+			if room.Status == RoomStatusPlaying && sameUserID(room.Round.Action.CurrentTurnUserID, userID) {
+				timeout := int64(room.ActionTimeout)
+				if timeout <= 0 {
+					timeout = 30
+				}
+				room.Round.Action.DeadlineAt = now + timeout
+			}
 		} else {
 			// 同账号再次 join_room（异常断线后仅 HTTP 重进等）：幂等成功，勿返回 ROOM_ALREADY_JOINED
 			p.Offline = false
