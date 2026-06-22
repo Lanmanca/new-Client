@@ -1,5 +1,5 @@
 import { IModal } from '@/types/modal';
-import { _decorator, Button as CButton, Color, Label, Node, ScrollView } from 'cc';
+import { _decorator, Button as CButton, Color, Label, Node, ScrollView, UITransform } from 'cc';
 import { BaseUI } from './BaseUI';
 import { Button } from './Button';
 const { ccclass, property } = _decorator;
@@ -32,6 +32,8 @@ export class Modal extends BaseUI implements IModal {
     cancelText: string = '取消';
     confirmText: string = '确定';
     titleColor: Color = new Color().fromHEX('#FFFFFF');
+    /** 内容区目标高度（px）。0 = 预制件默认高度，>0 = 手动指定 */
+    height: number = 0;
 
     onConfirm: () => boolean | Promise<boolean> = () => true;
     onCancel: () => boolean | Promise<boolean> = () => true;
@@ -105,6 +107,17 @@ export class Modal extends BaseUI implements IModal {
                 this._labelNode.active = false;
             }
             this.contentNode.addChild(this.content);
+        }
+
+        // 手动指定高度：放大 ScrollView 视口和 Modal 根节点
+        if (this.height > 0 && this.scrollView) {
+            const viewTransform = this.scrollView.node.getComponent(UITransform);
+            const modalTransform = this.node.getComponent(UITransform);
+            if (viewTransform && modalTransform) {
+                viewTransform.height = this.height;
+                // Body Widget top=100 + bottom=100 = 200px 固定边距
+                modalTransform.height = this.height + 200;
+            }
         }
     }
 
