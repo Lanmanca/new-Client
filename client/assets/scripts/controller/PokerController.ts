@@ -561,9 +561,8 @@ export class PokerController extends Component {
                             modal.content = settlement;
                             modal.confirmText = '确定';
                             modal.titleColor = new Color().fromHEX('#f9d972');
-                            // Settlement 高度：TotalPot(60) + 每个赢家卡片(160) + PotPayouts(80) + Rake(80)
-                            const winnerCount = state.winners?.length || 1;
-                            modal.height = 220 + 160 * winnerCount;
+                            // -1 = 动画结束后自动量取 settlement 实际高度
+                            modal.height = -1;
                         },
                         onConfirm: () => {
                             return true;

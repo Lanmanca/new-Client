@@ -32,7 +32,7 @@ export class Modal extends BaseUI implements IModal {
     cancelText: string = '取消';
     confirmText: string = '确定';
     titleColor: Color = new Color().fromHEX('#FFFFFF');
-    /** 内容区目标高度（px）。0 = 预制件默认高度，>0 = 手动指定 */
+    /** 内容区高度（px）。0 = 预制件默认，>0 = 手动指定，-1 = 动画结束后自动量取内容实际高度 */
     height: number = 0;
 
     onConfirm: () => boolean | Promise<boolean> = () => true;
@@ -73,6 +73,24 @@ export class Modal extends BaseUI implements IModal {
 
             // 等待弹窗动画完全结束，节点尺寸彻底稳定
             await this.showAndWait();
+
+            // height === -1：量取内容实际高度，按需放大视口和弹窗
+            if (this.height === -1 && this.contentNode && this.scrollView) {
+                const children = this.contentNode.children;
+                if (children.length > 0) {
+                    const contentTransform = children[children.length - 1].getComponent(UITransform);
+                    const viewTransform = this.scrollView.node.getComponent(UITransform);
+                    const modalTransform = this.node.getComponent(UITransform);
+                    if (contentTransform && viewTransform && modalTransform) {
+                        const actualHeight = contentTransform.height;
+                        if (actualHeight > viewTransform.height) {
+                            const delta = actualHeight - viewTransform.height;
+                            viewTransform.height = actualHeight;
+                            modalTransform.height += delta;
+                        }
+                    }
+                }
+            }
 
             // isValid 判断是检查节点是否被销毁，避免极端情况导致的错误
             if (this.scrollView && this.scrollView.isValid) {
