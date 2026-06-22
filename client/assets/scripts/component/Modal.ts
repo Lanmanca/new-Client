@@ -134,6 +134,13 @@ export class Modal extends BaseUI implements IModal {
                 bodyWidget.alignMode = Widget.AlignMode.ALWAYS;
             }
         }
+
+        // 强制立即重算布局（Widget 默认要等下一帧或窗口变化才触发）
+        widget.updateAlignment();
+        if (bodyNode) {
+            const bodyWidget = bodyNode.getComponent(Widget);
+            bodyWidget?.updateAlignment();
+        }
     }
 
     /**
