@@ -1,5 +1,5 @@
 import { IModal } from '@/types/modal';
-import { _decorator, Button as CButton, Color, Label, Node, ScrollView } from 'cc';
+import { _decorator, Button as CButton, Color, Label, Node, ScrollView, Widget } from 'cc';
 import { BaseUI } from './BaseUI';
 import { Button } from './Button';
 const { ccclass, property } = _decorator;
@@ -106,6 +106,20 @@ export class Modal extends BaseUI implements IModal {
             }
             this.contentNode.addChild(this.content);
         }
+    }
+
+    /**
+     * 将弹窗垂直方向拉伸为距屏幕上下各 100px，自动适配不同屏幕高度。
+     */
+    public stretchToFit(margin: number = 100) {
+        const widget = this.node.getComponent(Widget);
+        if (!widget) return;
+        widget.isAlignTop = true;
+        widget.isAlignBottom = true;
+        widget.isAlignVerticalCenter = false;
+        widget.top = margin;
+        widget.bottom = margin;
+        widget.alignMode = Widget.AlignMode.ALWAYS;
     }
 
     /**

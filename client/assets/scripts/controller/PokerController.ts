@@ -561,6 +561,7 @@ export class PokerController extends Component {
                             modal.content = settlement;
                             modal.confirmText = '确定';
                             modal.titleColor = new Color().fromHEX('#f9d972');
+                            modal.stretchToFit(100);
                         },
                         onConfirm: () => {
                             return true;
