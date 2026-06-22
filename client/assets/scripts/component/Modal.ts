@@ -55,6 +55,14 @@ export class Modal extends BaseUI implements IModal {
         this._labelNode = this.contentNode.getChildByPath('Label');
 
         this.init();
+
+        // 节点已在场景树中，强制重算 Widget 布局（先父后子）
+        const widget = this.node.getComponent(Widget);
+        widget?.updateAlignment();
+        const bodyNode = this.node.getChildByName('Body');
+        const bodyWidget = bodyNode?.getComponent(Widget);
+        bodyWidget?.updateAlignment();
+
         this.showAndWait();
     }
 
@@ -133,13 +141,6 @@ export class Modal extends BaseUI implements IModal {
                 bodyWidget.isAlignVerticalCenter = false;
                 bodyWidget.alignMode = Widget.AlignMode.ALWAYS;
             }
-        }
-
-        // 强制立即重算布局（Widget 默认要等下一帧或窗口变化才触发）
-        widget.updateAlignment();
-        if (bodyNode) {
-            const bodyWidget = bodyNode.getComponent(Widget);
-            bodyWidget?.updateAlignment();
         }
     }
 
