@@ -1,5 +1,5 @@
 import { IModal } from '@/types/modal';
-import { _decorator, Button as CButton, Color, Label, Node, ScrollView } from 'cc';
+import { _decorator, Button as CButton, Color, Label, Node, ScrollView, UITransform } from 'cc';
 import { BaseUI } from './BaseUI';
 import { Button } from './Button';
 const { ccclass, property } = _decorator;
@@ -32,6 +32,7 @@ export class Modal extends BaseUI implements IModal {
     cancelText: string = '取消';
     confirmText: string = '确定';
     titleColor: Color = new Color().fromHEX('#FFFFFF');
+    autoFit: boolean = false;
 
     onConfirm: () => boolean | Promise<boolean> = () => true;
     onCancel: () => boolean | Promise<boolean> = () => true;
@@ -105,6 +106,36 @@ export class Modal extends BaseUI implements IModal {
                 this._labelNode.active = false;
             }
             this.contentNode.addChild(this.content);
+        }
+
+        if (this.autoFit) {
+            this.scheduleOnce(() => this._adjustHeightToFitContent(), 0);
+        }
+    }
+
+    /**
+     * 根据内容自适应高度：
+     * 等 Layout 重算完成后，如果内容高度超过 ScrollView 视口，
+     * 同步放大 ScrollView 视口和 Modal 根节点。
+     */
+    private _adjustHeightToFitContent() {
+        if (!this.contentNode || !this.scrollView) return;
+
+        const contentTransform = this.contentNode.getComponent(UITransform);
+        const viewTransform = this.scrollView.node.getComponent(UITransform);
+        const modalTransform = this.node.getComponent(UITransform);
+
+        if (!contentTransform || !viewTransform || !modalTransform) return;
+
+        const contentHeight = contentTransform.height;
+        const viewHeight = viewTransform.height;
+
+        if (contentHeight > viewHeight) {
+            const delta = contentHeight - viewHeight;
+            // ScrollView 视口扩大到内容高度
+            viewTransform.height = contentHeight;
+            // Modal 根节点同步放大（Body 的 Widget top=100 bottom=100 会自动撑开）
+            modalTransform.height += delta;
         }
     }
 

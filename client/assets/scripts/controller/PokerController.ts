@@ -1,4 +1,5 @@
 import { Button, Modal, PokerPile, Sidebar } from '@/component';
+import { Countdown } from '@/component/CountDown';
 import { RoomInfo } from '@/component/RoomInfo';
 import { SettIement } from '@/component/SettIement';
 import config from '@/config';
@@ -398,6 +399,24 @@ export class PokerController extends Component {
 
         this.pokerFactory = new PokerFactory(this.pokerPrefab);
         this.seatLayout = new SeatLayout(this.tableNode, this.pokerPilePrefab);
+
+        // ── 关键：所有节点/UI 初始化必须在 subscribe 之前完成 ──
+        // subscribe 会立即用当前 state 触发一次回调（RoomSessionStore 第 108 行），
+        // 如果 WS 消息在场景加载前就已到达，回调中 refreshSeatPiles → updateBettingBarVisibility
+        // 会设置 betNode.active = true。若 initBetNodeHandlers 放在 subscribe 之后，
+        // 它会执行 betNode.active = false，直接覆盖回调的结果，导致第一次行动轮按钮消失。
+        this.createPlayerPokerPile();
+        this.refreshSeatPiles();
+        this.ensureCountdownUI();
+        this.ensureStageUI();
+        this.ensureSeatTimerLabels();
+        this.ensureSeatRoleLabels();
+        this.ensurePotUI();
+        this.initBetNodeHandlers();
+        this.updateSeatInfoCards();
+        this.updateSeatTimerOverlayLabels();
+        this.startLeaveRenderLoop();
+
         this._unsubscribeRoomState = roomSessionStore.subscribe(async state => {
             if (!state) {
                 this.room = null;
@@ -506,6 +525,10 @@ export class PokerController extends Component {
                 case 'leave':
                     if (state.role === 'player') {
                         this.startGameNode.active = false;
+                        // 玩家离开后房间不再满座，隐藏所有座位名称（BTN/SB/BB）
+                        for (const pile of this._seatPiles) {
+                            pile?.hideSeatName();
+                        }
                     }
                     break;
                 case 'gameover':
@@ -534,10 +557,11 @@ export class PokerController extends Component {
                             if (!settlement) return;
 
                             // 挂内容
-                            modal.title = '上一手结算';
+                            modal.title = '结算';
                             modal.content = settlement;
                             modal.confirmText = '确定';
                             modal.titleColor = new Color().fromHEX('#f9d972');
+                            modal.autoFit = true;
                         },
                         onConfirm: () => {
                             return true;
@@ -564,20 +588,18 @@ export class PokerController extends Component {
                     this.evaluateServerCountdown();
                     break;
                 }
+                case 'showdown': {
+                    // 摊牌亮牌事件：所有未弃牌玩家手牌公开
+                    // 紧随其后的 room_state_sync（showdownRevealUserIds 已填充）会触发签名变化 → rebuildStaticPlayingViewFromRoom
+                    console.log('[showdown] 亮牌事件', state.players);
+                    break;
+                }
             }
         });
 
-        this.createPlayerPokerPile();
+        // subscribe 回调已立即触发过一次，此处的 refreshSeatPiles 用于处理
+        // subscribe 回调中 room 为空（尚未收到 WS 同步）的情况
         this.refreshSeatPiles();
-        this.ensureCountdownUI();
-        this.ensureStageUI();
-        this.ensureSeatTimerLabels();
-        this.ensureSeatRoleLabels();
-        this.ensurePotUI();
-        this.initBetNodeHandlers();
-        this.updateSeatInfoCards();
-        this.updateSeatTimerOverlayLabels();
-        this.startLeaveRenderLoop();
 
         // 如果是房主，首次进入时自动打开房间信息弹窗
         if (
@@ -657,6 +679,7 @@ export class PokerController extends Component {
         bind(n.call);
         bind(n.raise);
         bind(n.allIn);
+        bind(n.showDown);
     }
 
     /** betNode 子节点触摸回调，按节点名分发到各操作 */
@@ -669,6 +692,7 @@ export class PokerController extends Component {
             case 'Call': void this.onBetCallOrCheck(); break;   // 跟注
             case 'Raise': this.toggleRaisePopup(); break;        // 加注 → 弹出预设选项
             case 'AllIn': void this.onBetAllIn(); break;         // 全下
+            case 'ShowDownNode': this.onShowDownClick(); break;  // 摊牌亮牌
         }
     }
 
@@ -1712,6 +1736,7 @@ export class PokerController extends Component {
         // 隐藏 betNode 和加注弹出层
         if (this.betNode) this.betNode.active = false;
         this._betNodesVisible = false;
+        this._showdownSent = false;
         this._lastPlayerBets.clear();
         this._lastPotTotal = 0;
         this._pendingBetAmount = 0;
@@ -2138,6 +2163,31 @@ export class PokerController extends Component {
         this._gameStarted = true;
         this.rebuildStaticPlayingViewFromRoom();
         this._lastAppliedRoundSignature = this.computeRoundViewSignature(this.room);
+        // 重建视图后刷新座位及下注栏可见性（_gameStarted 已为 true，
+        // 确保 sync 路径恢复时 betNode 能被正确评估显示）
+        this.refreshSeatPiles();
+
+        // 诊断日志：检查 betNode 最终视觉状态
+        if (this.betNode) {
+            const uiT = this.betNode.getComponent(UITransform);
+            const wp = uiT ? uiT.convertToWorldSpaceAR(Vec3.ZERO) : null;
+            console.log('[betVis-DIAG] after restore: active=', this.betNode.active,
+                'localPos=', this.betNode.position,
+                'worldPos=', wp,
+                'scale=', this.betNode.scale,
+                'siblingIndex=', this.betNode.getSiblingIndex(),
+                'childCount=', this.betNode.children.length,
+                'childrenActive=', this.betNode.children.map(c => `${c.name}:${c.active}`));
+            // 检查 Canvas 下哪些兄弟节点层级比 betNode 高
+            const parent = this.betNode.parent;
+            if (parent) {
+                const myIdx = this.betNode.getSiblingIndex();
+                const above = parent.children
+                    .map((c, i) => ({ name: c.name, idx: i, active: c.active, isBet: c === this.betNode }))
+                    .filter(c => c.idx > myIdx);
+                console.log('[betVis-DIAG] nodes ABOVE betNode:', JSON.stringify(above));
+            }
+        }
     }
 
     /** 以服务端 community_cards 连续非 0 前缀为准；全 0 时回退按阶段推断（兼容旧包） */
@@ -2272,7 +2322,6 @@ export class PokerController extends Component {
      * 确保底池UI存在。
      */
     private ensurePotUI() {
-        0
         this.ensureStagePotColumn();
     }
 
@@ -2438,22 +2487,64 @@ export class PokerController extends Component {
         const me = this.getCurrentPlayer();
         const stack = this.playerWalletAmount(me);
         const allInHand = this.playerAllInThisHand(me);
-        // 无剩余筹码、已全下或已弃牌：不再显示；连点锁避免全下后房态未回包前误触
-        const show = !!(
-            playing &&
-            uid &&
-            turn &&
-            turn === uid &&
-            stack > 0.01 &&
-            !allInHand &&
-            !me?.folded &&
-            !this._betActionLocked
-        );
+        console.log('[betVis] playing=', playing, 'uid=', uid, 'turn=', turn,
+            'match=', turn === uid, 'stack=', stack, 'allIn=', allInHand,
+            'folded=', me?.folded, 'locked=', this._betActionLocked,
+            'gameStarted=', this._gameStarted);
+        // ── 摊牌阶段特殊判断 ──
+        const _stage = (this.room?.round?.stage || '').toLowerCase();
+        const isShowdown = _stage === 'showdown';
+        // 区分两阶段：confirm（等待玩家点击比牌）vs reveal（亮牌展示中，只看不操作）
+        const isShowdownConfirm = isShowdown && turn === '__showdown__';
+
+        let show: boolean;
+        if (isShowdown) {
+            // 摊牌圈：仅 confirm 阶段显示 ShowDownNode，reveal 阶段隐藏（玩家只看牌）
+            show = !!(isShowdownConfirm && playing && uid && !me?.folded);
+        } else {
+            // 正常下注轮：无剩余筹码、已全下或已弃牌不再显示；连点锁避免误触
+            show = !!(
+                playing &&
+                uid &&
+                turn &&
+                turn === uid &&
+                stack > 0.01 &&
+                !allInHand &&
+                !me?.folded &&
+                !this._betActionLocked
+            );
+        }
+
         if (show && !this._betNodesVisible) {
             this.betNode.active = true;
             this._betNodesVisible = true;
+            console.log('[betVis] SHOWING betNode, showdown=', isShowdown,
+                'active=', this.betNode.active,
+                'pos=', this.betNode.position, 'parent=', this.betNode.parent?.name,
+                'parentActive=', this.betNode.parent?.active,
+                'children=', this.betNode.children.length);
             this.animateBetNodesIn();
+
+            // 摊牌圈 confirm 阶段：启动 ShowDownNode 上的 5 秒倒计时
+            if (isShowdownConfirm) {
+                this._showdownSent = false; // 新一手摊牌，重置发送标记
+                const bn0 = this.getBetChildNode();
+                if (bn0.showDown) {
+                    const cd = bn0.showDown.getComponent(Countdown);
+                    if (cd) {
+                        cd.startCountdown(5, 5, () => {
+                            // 倒计时结束 → 隐藏 betNode + 自动发送 show_down
+                            if (this.betNode) {
+                                this.betNode.active = false;
+                                this._betNodesVisible = false;
+                            }
+                            void this.sendShowDownAction();
+                        });
+                    }
+                }
+            }
         } else if (!show && this._betNodesVisible) {
+            console.log('[betVis] HIDING betNode');
             this.betNode.active = false;
             this._betNodesVisible = false;
             this.hideRaisePopup();
@@ -2461,6 +2552,9 @@ export class PokerController extends Component {
             this.betNode.active = false;
         }
         if (!show) return;
+
+        // ── 摊牌圈无需更新下注子节点文案，直接返回 ──
+        if (isShowdown) return;
 
         // ── betNode 子节点文案与显隐更新 ──
         const maxB = Math.max(
@@ -2487,10 +2581,6 @@ export class PokerController extends Component {
             if (bn.call) bn.call.active = true;
         }
 
-        // ShowDownNode 仅在 showdown 阶段显示
-        const _stage = (this.room?.round?.stage || '').toLowerCase();
-        if (bn.showDown) bn.showDown.active = (_stage === 'showdown');
-
         // 不可加注时关闭弹出层
         const snap = this.computeBetRaiseSnapshot(me);
         if (!snap?.canRaise) this.hideRaisePopup();
@@ -2503,16 +2593,29 @@ export class PokerController extends Component {
     private animateBetNodesIn() {
         if (!this.betNode) return;
         const stage = (this.room?.round?.stage || '').toLowerCase();
+        const turn = this.room?.round?.action?.currentTurnUserId;
         const isShowdown = stage === 'showdown';
+        // 仅 confirm 阶段展示 ShowDownNode，reveal 阶段不展示任何按钮
+        const isShowdownConfirm = isShowdown && turn === '__showdown__';
         const children = this.betNode.children;
         for (let i = 0; i < children.length; i++) {
             const child = children[i];
             if (!child || child.name === 'RaisePopup') continue;
 
-            // ShowDownNode 仅在 showdown 阶段显示，其余阶段始终隐藏
+            if (isShowdownConfirm) {
+                // ── 摊牌 confirm 阶段：只显示 ShowDownNode，其余操作按钮全部隐藏 ──
+                if (child.name === 'ShowDownNode') {
+                    child.active = true;
+                } else {
+                    child.active = false;
+                }
+                continue;
+            }
+
+            // ShowDownNode 仅在 showdown confirm 阶段显示，其余阶段始终隐藏
             if (child.name === 'ShowDownNode') {
-                child.active = isShowdown;
-                if (!isShowdown) continue;
+                child.active = false;
+                continue;
             }
 
             // 首次记录原始坐标（只记一次，之后永远用缓存值）
@@ -2982,6 +3085,38 @@ export class PokerController extends Component {
         await this.runLockedTableAction(() => roomSessionService.sendTableAction('all_in'));
     }
 
+    /** 摊牌圈：玩家主动点击亮牌 → 发送 show_down 给后端 */
+    private async onShowDownClick() {
+        // 停止 ShowDownNode 上的倒计时
+        const bn = this.getBetChildNode();
+        if (bn.showDown) {
+            const cd = bn.showDown.getComponent(Countdown);
+            if (cd) cd.hide();
+        }
+        // 隐藏整个 betNode，给玩家"已确认亮牌"的视觉反馈
+        if (this.betNode) {
+            this.betNode.active = false;
+            this._betNodesVisible = false;
+        }
+        // 发送 show_down action 到后端
+        await this.sendShowDownAction();
+    }
+
+    /**
+     * 发送 show_down 行动到后端（摊牌圈确认亮牌）。
+     * 带锁防止重复发送（点击 + 倒计时回调可能同时触发）。
+     */
+    private _showdownSent = false;
+    private async sendShowDownAction() {
+        if (this._disposed || this._showdownSent) return;
+        this._showdownSent = true;
+        try {
+            await roomSessionService.sendTableAction('show_down');
+        } catch (e) {
+            console.warn('[showDown] send failed, will rely on server timeout', e);
+        }
+    }
+
     /**
      * 确保座位计时器标签存在。
      */
@@ -3354,8 +3489,10 @@ export class PokerController extends Component {
 
     /**
      * 显示"等待游戏开始"提示文本。
+     * 与 startGameNode 互斥：开始按钮已显示时不显示等待文本。
      */
     private showWaitingText() {
+        if (this.startGameNode?.active) return;
         this.ensureWaitingText();
         if (this._waitingTextNode && isValid(this._waitingTextNode)) {
             this._waitingTextNode.active = true;
