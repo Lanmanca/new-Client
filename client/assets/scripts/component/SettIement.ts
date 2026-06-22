@@ -82,23 +82,18 @@ export class SettIement extends Component {
             .getChildByPath('WinPoker/winAmount')
             .getComponent(Label);
 
-        const poker1 = container.getChildByPath(
-            'WinPoker/Poker/PokerCard1'
-        );
-
-        const poker2 = container.getChildByPath(
-            'WinPoker/Poker/PokerCard2'
-        );
-
         winnerName.string = winner.nickname ?? '';
 
         winnerAmount.string = `+${winner.amount?.toString()}`;
 
-        const poker1Component = poker1.getComponent(PokerCard);
-        poker1Component.poker = winner.hole_cards?.[0];
-
-        const poker2Component = poker2.getComponent(PokerCard);
-        poker2Component.poker = winner.hole_cards?.[1];
+        const bestFive = winner.best_five ?? [];
+        for (let i = 0; i < 5; i++) {
+            const pokerNode = container.getChildByPath(
+                `WinPoker/Poker/PokerCard${i + 1}`
+            );
+            const pokerComponent = pokerNode.getComponent(PokerCard);
+            pokerComponent.poker = bestFive[i] ?? 0;
+        }
 
         this.setAvatar(container, winner.avatar);
     }
