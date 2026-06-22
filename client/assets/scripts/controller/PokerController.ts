@@ -561,8 +561,6 @@ export class PokerController extends Component {
                             modal.content = settlement;
                             modal.confirmText = '确定';
                             modal.titleColor = new Color().fromHEX('#f9d972');
-                            // -1 = 动画结束后自动量取 settlement 实际高度
-                            modal.height = -1;
                         },
                         onConfirm: () => {
                             return true;
