@@ -2499,8 +2499,8 @@ export class PokerController extends Component {
 
         let show: boolean;
         if (isShowdown) {
-            // 摊牌圈：仅 confirm 阶段显示 ShowDownNode，reveal 阶段隐藏（玩家只看牌）
-            show = !!(isShowdownConfirm && playing && uid && !me?.folded);
+            // 摊牌圈：仅 confirm 阶段且玩家尚未点击时显示 ShowDownNode，reveal 阶段隐藏（玩家只看牌）
+            show = !!(isShowdownConfirm && playing && uid && !me?.folded && !this._showdownSent);
         } else {
             // 正常下注轮：无剩余筹码、已全下或已弃牌不再显示；连点锁避免误触
             show = !!(
