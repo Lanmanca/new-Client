@@ -109,9 +109,11 @@ export class Modal extends BaseUI implements IModal {
     }
 
     /**
-     * 将弹窗垂直方向拉伸为距屏幕上下各 100px，自动适配不同屏幕高度。
+     * 将弹窗垂直方向拉伸为距屏幕上下各 margin 像素，自动适配不同屏幕高度。
+     * 同时修正 Body 节点的 Widget 为 TOP+BOTTOM 拉伸模式。
      */
     public stretchToFit(margin: number = 100) {
+        // Modal 根节点：上下对齐
         const widget = this.node.getComponent(Widget);
         if (!widget) return;
         widget.isAlignTop = true;
@@ -120,6 +122,18 @@ export class Modal extends BaseUI implements IModal {
         widget.top = margin;
         widget.bottom = margin;
         widget.alignMode = Widget.AlignMode.ALWAYS;
+
+        // Body 节点：关闭垂直居中，开启 TOP+BOTTOM 拉伸
+        const bodyNode = this.node.getChildByName('Body');
+        if (bodyNode) {
+            const bodyWidget = bodyNode.getComponent(Widget);
+            if (bodyWidget) {
+                bodyWidget.isAlignTop = true;
+                bodyWidget.isAlignBottom = true;
+                bodyWidget.isAlignVerticalCenter = false;
+                bodyWidget.alignMode = Widget.AlignMode.ALWAYS;
+            }
+        }
     }
 
     /**
