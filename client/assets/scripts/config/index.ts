@@ -298,12 +298,6 @@ export default class Config {
                 type: FormItemType.Input,
                 readonly: true,
             },
-            {
-                label: i18n.t('game.room_info.players.title'),
-                key: 'players',
-                type: FormItemType.Input,
-                readonly: true,
-            },
         ];
     }
 }

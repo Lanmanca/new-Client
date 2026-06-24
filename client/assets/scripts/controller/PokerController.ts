@@ -995,16 +995,12 @@ export class PokerController extends Component {
         const ownerIsAway = owner.status === 'leave';
         const ownerLeftTag =
             i18n.t('PLAYER_LEFT_TAG') || i18n.t('game.room_info.owner_left_tag') || '离开';
-        const playersNames =
-            players
-                ?.filter(player => {
-                    // 仅房主“离开”状态时，不在“房间内玩家”列表里重复展示房主。
-                    if (!ownerIsAway) return true;
-                    return (player.userId || player.user?.userId) !== owner.userId;
-                })
-                ?.map(player => player.nickname || player.user?.nickname || player.userId || '')
-                .filter(Boolean)
-                .join(', ') || '';
+
+        // 过滤玩家列表：房主离开时不重复展示
+        const filteredPlayers = (players || []).filter(player => {
+            if (!ownerIsAway) return true;
+            return (player.userId || player.user?.userId) !== owner.userId;
+        });
 
         const roomInfo = {
             roomType: room.roomType,
@@ -1012,8 +1008,10 @@ export class PokerController extends Component {
             owner:
                 (owner.nickname || owner.userId) +
                 (ownerIsAway ? ` [${ownerLeftTag}]` : ''),
-            players: playersNames,
+            players: filteredPlayers
         };
+
+        console.log("房间信息", room);
 
         await uiManager.createModal('RoomInfo', null, {
             onLoad(node) {
