@@ -193,8 +193,10 @@ func buildGameOverEvent(room *Room) RoomEvent {
 			bestByUser[best.UserID] = best
 		}
 		seatByUser := make(map[string]int, len(room.Players))
+		avatarByUser := make(map[string]string, len(room.Players))
 		for _, p := range room.Players {
 			seatByUser[p.UserID] = p.SeatIndex
+			avatarByUser[p.UserID] = p.AvatarURL
 		}
 		for _, payout := range room.Round.LastHandPayouts {
 			if payout.Amount <= chipEps {
@@ -203,6 +205,7 @@ func buildGameOverEvent(room *Room) RoomEvent {
 			w := GameOverWinnerResp{
 				UserID:    payout.UserID,
 				Nickname:  payout.Nickname,
+				AvatarURL: avatarByUser[payout.UserID],
 				SeatIndex: seatByUser[payout.UserID],
 				Amount:    payout.Amount,
 				HoleCards: append([]int(nil), payout.HoleCards...),
@@ -647,6 +650,67 @@ func (r *Repository) ApplyPlayerEvent(roomNumber, userID, event string, data map
 			}
 		}
 		wasPlaying := room.Status == RoomStatusPlaying
+
+		// ── 摊牌阶段：show_down 确认亮牌（不走 applyPokerAction） ──
+		if kind == "show_down" {
+			if room.Round.Stage != "showdown" {
+				return nil, fmt.Errorf("NOT_SHOWDOWN_STAGE")
+			}
+			seat := room.Players[playerIdx].SeatIndex
+			if room.ShowdownActed == nil {
+				room.ShowdownActed = make(map[int]bool)
+			}
+			room.ShowdownActed[seat] = true
+			fmt.Printf("[show_down] user=%s seat=%d confirmed\n", userID, seat)
+
+			// 检查是否所有未弃牌的活跃玩家都已确认
+			allConfirmed := true
+			for i := range room.Players {
+				p := &room.Players[i]
+				if playerInHand(p) && !p.Folded && !room.ShowdownActed[p.SeatIndex] {
+					allConfirmed = false
+					break
+				}
+			}
+			if allConfirmed {
+				fmt.Printf("[show_down] ALL players confirmed → entering reveal phase\n")
+				// 填充 ShowdownRevealUserIDs，使后续 room_state_sync 对全员公开底牌
+				var reveal []string
+				var sdPlayers []ShowdownPlayer
+				for i := range room.Players {
+					p := &room.Players[i]
+					if playerInHand(p) && !p.Folded {
+						reveal = append(reveal, p.UserID)
+						sdPlayers = append(sdPlayers, ShowdownPlayer{
+							SeatIndex: p.SeatIndex,
+							UserID:    p.UserID,
+							Nickname:  p.Nickname,
+							Cards:     append([]int(nil), p.Cards...),
+						})
+					}
+				}
+				sort.Strings(reveal)
+				room.Round.ShowdownRevealUserIDs = reveal
+				room.ShowdownPhase = "reveal"
+				room.Round.Action.DeadlineAt = now + 5
+				room.Round.Action.CurrentTurnUserID = "__showdown_reveal__"
+				// 广播 showdown 事件，携带所有未弃牌玩家手牌
+				events = append(events, RoomEvent{
+					Type:  "event",
+					Event: "showdown",
+					Data: ShowdownEventData{
+						Players: sdPlayers,
+					},
+				})
+			}
+			// 即使未全员确认，也返回当前房态（前端需要 sync 回包）
+			if wasPlaying && room.Status != RoomStatusPlaying && room.Round.LastHandKind != "" {
+				events = append(events, buildHandEndEvents(room, now)...)
+				handEnded = true
+			}
+			break
+		}
+
 		if err := applyPokerAction(room, userID, kind, amount, now); err != nil {
 			return nil, err
 		}
@@ -704,20 +768,31 @@ func (r *Repository) ApplyPlayerEvent(roomNumber, userID, event string, data map
 					fmt.Printf("[game.leave] current-turn user=%s seat=%d deadline shortened to 5s (was %ds)\n",
 						userID, seatBefore, remaining)
 				} else {
-					room.Players[playerIdx].Folded = true
-					room.BettingActed[seatBefore] = true
-					recordLastAction(room, userID, "fold", 0)
+					// 剩余读秒 ≤ 5s → 立即自动操作（check > fold，最小损失原则）
+					if room.Players[playerIdx].CurrentBet+chipEps >= room.BettingMaxStreet {
+						// 能过牌就过牌
+						room.BettingActed[seatBefore] = true
+						recordLastAction(room, userID, "check", 0)
+						fmt.Printf("[game.leave] current-turn auto-check user=%s seat=%d (remaining=%ds)\n",
+							userID, seatBefore, remaining)
+						advanceBettingTurn(room, now, seatBefore)
+					} else {
+						// 不能过牌则弃牌
+						room.Players[playerIdx].Folded = true
+						room.BettingActed[seatBefore] = true
+						recordLastAction(room, userID, "fold", 0)
 
-					fmt.Printf("[game.leave] current-turn auto-fold user=%s seat=%d (remaining=%ds)\n",
-						userID, seatBefore, remaining)
+						fmt.Printf("[game.leave] current-turn auto-fold user=%s seat=%d (remaining=%ds)\n",
+							userID, seatBefore, remaining)
 
-					advanceBettingTurn(room, now, seatBefore)
+						advanceBettingTurn(room, now, seatBefore)
 
-					// 弃牌可能导致整手结束（如 2 人局当前玩家离开弃牌 → fold_win）
-					if room.Status != RoomStatusPlaying && room.Round.LastHandKind != "" {
-						fmt.Printf("[game.leave] hand ended via auto-fold, kind=%s\n", room.Round.LastHandKind)
-						events = append(events, buildHandEndEvents(room, now)...)
-						handEnded = true
+						// 弃牌可能导致整手结束（如 2 人局当前玩家离开弃牌 → fold_win）
+						if room.Status != RoomStatusPlaying && room.Round.LastHandKind != "" {
+							fmt.Printf("[game.leave] hand ended via auto-fold, kind=%s\n", room.Round.LastHandKind)
+							events = append(events, buildHandEndEvents(room, now)...)
+							handEnded = true
+						}
 					}
 				}
 			} else {

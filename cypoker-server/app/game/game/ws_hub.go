@@ -19,10 +19,11 @@ func NewWSManager(repo *Repository) *WSManager {
 	m := &WSManager{
 		repo: repo,
 		hub: &RoomHub{
-			roomConns:    map[string]map[*websocket.Conn]struct{}{},
-			connKeys:     map[*websocket.Conn]string{},
-			roomUserConn: map[string]map[string]*websocket.Conn{},
-			connUsers:    map[*websocket.Conn]string{},
+			roomConns:          map[string]map[*websocket.Conn]struct{}{},
+			connKeys:           map[*websocket.Conn]string{},
+			roomUserConn:       map[string]map[string]*websocket.Conn{},
+			connUsers:          map[*websocket.Conn]string{},
+			pendingRecoverEvents: map[string]RoomEvent{},
 		},
 	}
 	go m.runRoomTimers()
@@ -51,6 +52,9 @@ type RoomHub struct {
 	connKeys     map[*websocket.Conn]string
 	roomUserConn map[string]map[string]*websocket.Conn
 	connUsers    map[*websocket.Conn]string
+	// 暂存重连 recover 事件；HTTP join_room 阶段新 WS 尚未注册，
+	// recover 无法直接推送，等 WS 注册并下发 room_state_sync 后再补发。
+	pendingRecoverEvents map[string]RoomEvent // key: "roomID:userID"
 }
 
 func (h *RoomHub) register(roomID, userID string, conn *websocket.Conn, deviceID string) {
@@ -130,12 +134,21 @@ func (h *RoomHub) closeRoom(roomID string) {
 	delete(h.roomUserConn, roomID)
 }
 
+// storePendingRecover 暂存 recover 事件，等新 WS 注册后再补发。
+func (h *RoomHub) storePendingRecover(roomID, userID string, event RoomEvent) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	key := roomID + ":" + userID
+	h.pendingRecoverEvents[key] = event
+}
+
 // sendRoomStateToConn WebSocket 刚注册时向该连接补发一份当前房态（与广播同格式），避免客户端再用 HTTP 轮询补态。
-func (h *RoomHub) sendRoomStateToConn(conn *websocket.Conn, deviceID, viewerUserID string, roomState *RoomStateResp) {
+// 发送完毕后自动检查是否有暂存的 recover 事件并补发（解决 HTTP join_room 阶段新 WS 尚未注册的问题）。
+func (h *RoomHub) sendRoomStateToConn(conn *websocket.Conn, deviceID, userID, roomID string, roomState *RoomStateResp) {
 	if conn == nil || roomState == nil {
 		return
 	}
-	masked := h.maskRoomStateForUser(roomState, viewerUserID)
+	masked := h.maskRoomStateForUser(roomState, userID)
 	payload, _ := json.Marshal(map[string]any{
 		"id":        "",
 		"type":      "event",
@@ -154,7 +167,28 @@ func (h *RoomHub) sendRoomStateToConn(conn *websocket.Conn, deviceID, viewerUser
 	})
 	_ = deviceID
 	_ = conn.WriteMessage(websocket.TextMessage, payload)
+
+	// room_state_sync 发出后，检查并补发暂存的 recover 事件
+	h.mu.Lock()
+	key := roomID + ":" + userID
+	recoverEvent, ok := h.pendingRecoverEvents[key]
+	if ok {
+		delete(h.pendingRecoverEvents, key)
+	}
+	h.mu.Unlock()
+	if ok {
+		recoverPayload, _ := json.Marshal(map[string]any{
+			"type":      "event",
+			"event":     recoverEvent.Event,
+			"timestamp": time.Now().UnixMilli(),
+			"status":    true,
+			"message":   "WS_EVENT_RECEIVED",
+			"data":      recoverEvent.Data,
+		})
+		_ = conn.WriteMessage(websocket.TextMessage, recoverPayload)
+	}
 }
+
 
 func (h *RoomHub) broadcastRoomState(roomID string, roomState *RoomStateResp) {
 	if roomState == nil {

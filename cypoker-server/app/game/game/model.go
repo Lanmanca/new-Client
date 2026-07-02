@@ -152,6 +152,8 @@ type Room struct {
 	// 本手牌下注引擎（内存态，不序列化到房态 JSON）
 	BettingMaxStreet float64      `json:"-"`
 	BettingActed     map[int]bool `json:"-"` // seatIndex -> 本轮是否已作出闭式行动（跟/弃/过牌/加注）
+	ShowdownActed    map[int]bool `json:"-"` // seatIndex -> 摊牌阶段是否已确认亮牌
+	ShowdownPhase    string       `json:"-"` // "confirm" 等待玩家点击 | "reveal" 展示手牌中
 }
 
 func nowUnix() int64 {

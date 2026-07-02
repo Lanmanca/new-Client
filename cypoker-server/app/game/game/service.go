@@ -59,7 +59,7 @@ func (s *Service) JoinRoom(ctx *star.Context) *star.Response {
 		for _, p := range resp.Room.Players {
 			if sameUserID(p.UserID, userID) && p.SeatIndex > 0 && len(p.Cards) >= 2 {
 				masked := s.ws.hub.maskRoomStateForUser(&resp.Room, userID)
-				s.ws.hub.sendEventToUser(in.RoomNumber, userID, RoomEvent{
+				s.ws.hub.storePendingRecover(in.RoomNumber, userID, RoomEvent{
 					Type:  "event",
 					Event: "recover",
 					Data: RecoverEventData{

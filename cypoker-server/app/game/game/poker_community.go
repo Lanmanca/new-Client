@@ -22,6 +22,17 @@ func revealCommunityForStage(room *Room) {
 	room.Round.CommunityCards = vis
 }
 
+// revealAllRemainingCommunityCards 摊牌阶段（all-in 跳过下注轮）将剩余公共牌全部翻开。
+func revealAllRemainingCommunityCards(room *Room) {
+	deck := room.Round.communityDeck
+	if len(deck) < 5 {
+		return
+	}
+	vis := make([]int, 5)
+	copy(vis, deck)
+	room.Round.CommunityCards = vis
+}
+
 // communityBoardForEval 比牌用完整五张公共牌（来自内存 deck）。
 func communityBoardForEval(room *Room) []int {
 	if len(room.Round.communityDeck) >= 5 {

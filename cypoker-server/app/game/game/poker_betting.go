@@ -586,7 +586,16 @@ func advanceStreetOrFinish(room *Room, now int64) {
 	case "turn":
 		room.Round.Stage = "river"
 	case "river":
-		settleShowdownMVP(room, now)
+		// 进入摊牌阶段：给所有未弃牌玩家 5 秒停留（前端展示 ShowDownNode + 倒计时），
+		// 倒计时到期后由 ProcessRoomTimers → applyActionTimeout 触发 settleShowdownMVP。
+		room.Round.Stage = "showdown"
+		room.Round.Action.CurrentTurnUserID = "__showdown__"
+		room.Round.Action.DeadlineAt = now + 5
+		room.BettingActed = make(map[int]bool)
+		room.ShowdownActed = make(map[int]bool)
+		room.ShowdownPhase = "confirm"
+		revealCommunityForStage(room)
+		fmt.Printf("[advanceStreetOrFinish] river → showdown confirm phase, deadline=now+5\n")
 		return
 	default:
 		settleShowdownMVP(room, now)
@@ -604,7 +613,15 @@ func advanceStreetOrFinish(room *Room, now int64) {
 	room.BettingActed = make(map[int]bool)
 	first := firstPostFlopActor(room)
 	if first <= 0 {
-		settleShowdownMVP(room, now)
+		// 所有未弃牌玩家已 all-in，发完剩余公共牌后进入摊牌倒计时
+		revealAllRemainingCommunityCards(room)
+		room.Round.Stage = "showdown"
+		room.Round.Action.CurrentTurnUserID = "__showdown__"
+		room.Round.Action.DeadlineAt = now + 5
+		room.BettingActed = make(map[int]bool)
+		room.ShowdownActed = make(map[int]bool)
+		room.ShowdownPhase = "confirm"
+		fmt.Printf("[advanceStreetOrFinish] all-in showdown confirm phase, deadline=now+5\n")
 		return
 	}
 	setActionTurn(room, first, now)
@@ -873,6 +890,8 @@ func endHandResetRoom(room *Room, now int64, finalStage string, clearCommunity b
 	room.Round.Action.CurrentTurnUserID = ""
 	room.Round.Action.DeadlineAt = 0
 	room.BettingActed = nil
+	room.ShowdownActed = nil
+	room.ShowdownPhase = ""
 	room.BettingMaxStreet = 0
 	for i := range room.Players {
 		if clearCommunity {
@@ -911,6 +930,32 @@ func applyActionTimeout(room *Room, now int64) bool {
 	if room.Round.Action.DeadlineAt <= 0 || now < room.Round.Action.DeadlineAt {
 		return false
 	}
+
+	// ── 摊牌阶段超时：两阶段（confirm → reveal → settle） ──
+	if room.Round.Stage == "showdown" {
+		if room.ShowdownPhase == "confirm" {
+			// confirm 阶段超时：自动确认所有未确认玩家，进入 reveal 阶段
+			fmt.Printf("[timeout] showdown confirm deadline reached → auto-confirm all, enter reveal\n")
+			var reveal []string
+			for i := range room.Players {
+				p := &room.Players[i]
+				if playerInHand(p) && !p.Folded {
+					reveal = append(reveal, p.UserID)
+				}
+			}
+			sort.Strings(reveal)
+			room.Round.ShowdownRevealUserIDs = reveal
+			room.ShowdownPhase = "reveal"
+			room.Round.Action.DeadlineAt = now + 5
+			room.Round.Action.CurrentTurnUserID = "__showdown_reveal__"
+			return true
+		}
+		// reveal 阶段超时：亮牌展示完毕，进入结算
+		fmt.Printf("[timeout] showdown reveal deadline reached → settleShowdownMVP\n")
+		settleShowdownMVP(room, now)
+		return true
+	}
+
 	uid := room.Round.Action.CurrentTurnUserID
 	if uid == "" {
 		return false
@@ -945,34 +990,18 @@ func applyActionTimeout(room *Room, now int64) bool {
 		recordLastAction(room, uid, "fold", 0)
 		advanceBettingTurn(room, now, seat)
 	} else if room.Players[pi].CurrentBet+chipEps >= room.BettingMaxStreet {
-		// 在线玩家：能过牌就过牌
+		// 在线玩家：能过牌就过牌（check > fold）
 		fmt.Printf("[timeout] auto-CHECK online user=%s seat=%d\n", uid, seat)
 		room.BettingActed[seat] = true
 		recordLastAction(room, uid, "check", 0)
 		advanceBettingTurn(room, now, seat)
 	} else {
-		// 在线玩家超时：正常跟注/全下/弃牌
-		preW := room.Players[pi].Wallet
-		toCall := room.BettingMaxStreet - room.Players[pi].CurrentBet
-		if preW > chipEps && toCall > chipEps {
-			pay := math.Min(toCall, preW)
-			postChip(room, pi, pay)
-			markAllInIfCommittedFullStack(&room.Players[pi], preW, pay)
-			room.BettingActed[seat] = true
-			act := "call"
-			if pay+chipEps >= preW-chipEps {
-				act = "all_in"
-			}
-			fmt.Printf("[timeout] auto-%s online user=%s seat=%d pay=%.2f\n", act, uid, seat, pay)
-			recordLastAction(room, uid, act, pay)
-			advanceBettingTurn(room, now, seat)
-		} else {
-			fmt.Printf("[timeout] auto-FOLD online user=%s seat=%d (no chips to call)\n", uid, seat)
-			room.Players[pi].Folded = true
-			room.BettingActed[seat] = true
-			recordLastAction(room, uid, "fold", 0)
-			advanceBettingTurn(room, now, seat)
-		}
+		// 在线玩家超时且不能过牌：直接弃牌（最小损失原则，不自动跟注/加注）
+		fmt.Printf("[timeout] auto-FOLD online user=%s seat=%d (check not available)\n", uid, seat)
+		room.Players[pi].Folded = true
+		room.BettingActed[seat] = true
+		recordLastAction(room, uid, "fold", 0)
+		advanceBettingTurn(room, now, seat)
 	}
 	return true
 }

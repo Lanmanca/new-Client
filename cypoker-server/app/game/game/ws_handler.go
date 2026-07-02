@@ -33,7 +33,7 @@ func (m *WSManager) Handle(ctx *star.Context) *star.Response {
 	// 连接建立后立即下发当前房态：房态真源在 WS 推送链路，避免客户端依赖「每次 onopen 再打 HTTP」补态。
 	if strings.TrimSpace(roomID) != "" && strings.TrimSpace(userID) != "" {
 		if rs, err := m.repo.GetRoomState(roomID); err == nil && rs != nil {
-			m.hub.sendRoomStateToConn(conn, deviceID, userID, rs)
+			m.hub.sendRoomStateToConn(conn, deviceID, userID, roomID, rs)
 		}
 	}
 	// leaveSentByClient 标记该连接是否已显式处理过 "leave" 事件。

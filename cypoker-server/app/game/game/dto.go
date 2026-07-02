@@ -243,6 +243,7 @@ type RecoverEventData struct {
 type GameOverWinnerResp struct {
 	UserID       string  `json:"user_id"`
 	Nickname     string  `json:"nickname"`
+	AvatarURL    string  `json:"avatar_url"`
 	SeatIndex    int     `json:"seat_index"`
 	Amount       float64 `json:"amount"`
 	HoleCards    []int   `json:"hole_cards,omitempty"`
@@ -258,6 +259,19 @@ type GameOverEventData struct {
 	Layers            []LastHandLayer      `json:"layers,omitempty"`
 	Winners           []GameOverWinnerResp `json:"winners"`
 	ShowdownBestHands []ShowdownBestHand   `json:"showdown_best_hands,omitempty"`
+}
+
+// ShowdownPlayer 摊牌亮牌事件中单个玩家的公开信息
+type ShowdownPlayer struct {
+	SeatIndex int    `json:"seat_index"`
+	UserID    string `json:"user_id"`
+	Nickname  string `json:"nickname"`
+	Cards     []int  `json:"cards"`
+}
+
+// ShowdownEventData 摊牌亮牌事件：所有未弃牌玩家的手牌公开广播
+type ShowdownEventData struct {
+	Players []ShowdownPlayer `json:"players"`
 }
 
 type RoomStateResp struct {

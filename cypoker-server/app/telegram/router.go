@@ -9,6 +9,7 @@ import (
 	"star"
 	"strings"
 	"time"
+	"fmt"
 )
 
 type webhookUpdate struct {
@@ -118,6 +119,7 @@ func init() {
 				rawURL = strings.TrimSpace(ctx.GetQuery("path").(string))
 			}
 			if rawURL == "" {
+				fmt.Println("rawURL1:", rawURL)
 				ctx.ResponseError(http.StatusBadRequest)
 				return nil
 			}
@@ -126,8 +128,10 @@ func init() {
 				rawURL = "https:" + rawURL
 			}
 
+
 			targetURL, err := url.Parse(rawURL)
 			if err != nil {
+				fmt.Println("rawURL2:", rawURL, err)
 				ctx.ResponseError(http.StatusBadRequest, err)
 				return nil
 			}
@@ -135,22 +139,26 @@ func init() {
 			if targetURL.Scheme == "" && targetURL.Host == "" {
 				targetURL, err = url.Parse("https://t.me" + strings.TrimSpace(targetURL.String()))
 				if err != nil {
+					fmt.Println("rawURL3:", rawURL, err)
 					ctx.ResponseError(http.StatusBadRequest, err)
 					return nil
 				}
 			}
 
 			if !strings.EqualFold(targetURL.Scheme, "http") && !strings.EqualFold(targetURL.Scheme, "https") {
+				fmt.Println("rawURL4:", rawURL)
 				ctx.ResponseError(http.StatusBadRequest)
 				return nil
 			}
 			if !isAllowedTelegramHost(targetURL.Hostname()) {
+				fmt.Println("rawURL5:", rawURL)
 				ctx.ResponseError(http.StatusBadRequest)
 				return nil
 			}
 
 			req, err := http.NewRequest(http.MethodGet, targetURL.String(), nil)
 			if err != nil {
+				fmt.Println("rawURL6:", rawURL, err)
 				ctx.ResponseError(http.StatusBadRequest, err)
 				return nil
 			}
@@ -160,6 +168,7 @@ func init() {
 
 			resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
 			if err != nil {
+				fmt.Println("err?????????:", err)
 				ctx.ResponseError(http.StatusBadGateway, err)
 				return nil
 			}
