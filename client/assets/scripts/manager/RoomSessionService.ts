@@ -135,7 +135,7 @@ class RoomSessionService {
 
     /** 对局内行动：fold / call / check / raise / all_in（raise 时 amount 为本街目标总下注额，服务端校验） */
     async sendTableAction(
-        kind: 'fold' | 'call' | 'check' | 'raise' | 'all_in',
+        kind: 'fold' | 'call' | 'check' | 'raise' | 'all_in' | 'show_down',
         amount = 0
     ): Promise<{ ok: boolean; message?: string }> {
         if (!this.conn) return { ok: false };
@@ -264,6 +264,16 @@ class RoomSessionService {
                     folded: d.folded,
                     all_in_hand: d.all_in_hand,
                     room_state: normalizedRoom,
+                });
+                break;
+            }
+            case EventType.Showdown: {
+                // 摊牌亮牌事件：所有未弃牌玩家的手牌公开
+                const sdData = message.data || {};
+                const sdPlayers = sdData.players || sdData.Players || [];
+                roomSessionStore.patch({
+                    type: 'showdown',
+                    players: sdPlayers,
                 });
                 break;
             }

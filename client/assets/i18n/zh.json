@@ -146,7 +146,7 @@
         },
         "home": {
             "slide_switch": {
-                "current_room": "当前房间",
+                "current_room": "我的房间",
                 "hall": "大厅"
             },
             "room_list": {
@@ -208,6 +208,7 @@
             "deposit": "充值"
         }
     },
+    "START_GAME": "开始游戏",
     "PLAYER_LEFT_TAG": "离开",
     "NEED_STAND_UP_FIRST": "你已坐下，如需更换座位请先站起",
     "NEED_SIT_DOWN_FIRST": "你还没有坐下。",
@@ -233,6 +234,7 @@
     "STAGE_TURN": "转牌圈",
     "STAGE_RIVER": "河牌圈",
     "STAGE_SHOWDOWN": "摊牌",
+    "SHOWDOWN_COUNTDOWN": "亮牌阶段",
     "HAND_CATEGORY_STRAIGHT_FLUSH": "同花顺",
     "HAND_CATEGORY_FOUR_OF_A_KIND": "四条",
     "HAND_CATEGORY_FULL_HOUSE": "葫芦",
@@ -281,6 +283,7 @@
     "INVALID_ACTION": "无效操作",
     "CANNOT_CHECK": "不能过牌",
     "CANNOT_RAISE": "筹码不足或无法加注",
+    "WAITING_FOR_THE_GAME_TO_START": "等待游戏开始",
     "game": {
         "error": {
             "not_found": "房间不存在或已解散"

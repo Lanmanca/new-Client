@@ -284,10 +284,6 @@ export class PokerController extends Component {
     private _stageLabelNode: Node | null = null;
     /** 阶段标题 */
     private _stageLabel: Label | null = null;
-    /** 底池标签节点 */
-    private _potLabelNode: Node | null = null;
-    /** 底池标签 */
-    private _potLabel: Label | null = null;
     /** 离开渲染定时器 */
     private _leaveRenderTimer: ReturnType<typeof setInterval> | null = null;
     /** 当前玩家独立读秒 Label 节点 */
@@ -332,13 +328,9 @@ export class PokerController extends Component {
     private _betNodeOriginalPositions = new Map<string, Vec3>();
     /** 上次同步的各座位下注金额快照，用于检测下注变化触发筹码飞行动画 */
     private _lastPlayerBets = new Map<number, number>();
-    /** 上次同步的底池总额快照，用于回合结束（currentBet 被重置）时回推下注额 */
-    private _lastPotTotal = 0;
     /** 当前用户发起下注时记录的金额和座位号（sync 回包后用于精确定位跟注者） */
     private _pendingBetAmount = 0;
     private _pendingBetSeat = -1;
-    /** 避免同一手结算重复弹窗 */
-    private _lastSettlementAlertKey = '';
     /** 上一手已渲染的公共牌张数（同手内递增时用动画；换 hand_no 或清桌重置） */
     private _lastRenderedCommunityCount = 0;
     /** 上一手已渲染的公共牌手号 */
@@ -350,6 +342,12 @@ export class PokerController extends Component {
     // 在类中新增一个属性，用于缓存你在编辑器里严格拖拽设计好的完美坐标
     private _originalSeatPositions: Vec3[] = null;
     private currentPlayerSeat = -1; // 当前玩家座位索引，用于准备操作
+    /** 亮牌阶段倒计时节点 */
+    private _showdownCdNode: Node | null = null;
+    /** 亮牌阶段倒计时 Label */
+    private _showdownCdLabel: Label | null = null;
+    /** 亮牌阶段倒计时定时器 */
+    private _showdownCdTimer: ReturnType<typeof setInterval> | null = null;
 
     /**
      * 组件初始化入口，设置牌桌背景、注册按钮事件、初始化工厂与布局、订阅房间状态、创建座位和UI等。
@@ -561,7 +559,7 @@ export class PokerController extends Component {
                             modal.content = settlement;
                             modal.confirmText = '确定';
                             modal.titleColor = new Color().fromHEX('#f9d972');
-                            modal.stretchToFit(100);
+                            modal.stretchToFit(200);
                         },
                         onConfirm: () => {
                             return true;
@@ -643,8 +641,6 @@ export class PokerController extends Component {
         if (!ok) return;
         await this.sitDown(mySeat);
     }
-
-    // ────────────── betNode 操作节点 ──────────────
 
     /** 获取 betNode 下的操作子节点（节点名与操作名的映射由编辑器决定） */
     private getBetChildNode() {
@@ -995,16 +991,19 @@ export class PokerController extends Component {
         const ownerIsAway = owner.status === 'leave';
         const ownerLeftTag =
             i18n.t('PLAYER_LEFT_TAG') || i18n.t('game.room_info.owner_left_tag') || '离开';
-        const playersNames =
+        const playerList =
             players
                 ?.filter(player => {
-                    // 仅房主“离开”状态时，不在“房间内玩家”列表里重复展示房主。
+                    // 仅房主”离开”状态时，不在”房间内玩家”列表里重复展示房主。
                     if (!ownerIsAway) return true;
                     return (player.userId || player.user?.userId) !== owner.userId;
                 })
-                ?.map(player => player.nickname || player.user?.nickname || player.userId || '')
-                .filter(Boolean)
-                .join(', ') || '';
+                ?.map(player => ({
+                    avatarUrl: player.avatarUrl || player.user?.avatarUrl || '',
+                    nickname: player.nickname || player.user?.nickname || player.userId || '',
+                    isOwner: (player.userId || player.user?.userId) === owner.userId,
+                }))
+                ?.filter(p => p.avatarUrl || p.nickname) || [];
 
         const roomInfo = {
             roomType: room.roomType,
@@ -1012,8 +1011,10 @@ export class PokerController extends Component {
             owner:
                 (owner.nickname || owner.userId) +
                 (ownerIsAway ? ` [${ownerLeftTag}]` : ''),
-            players: playersNames,
+            playerList,
         };
+
+        console.log("房间信息", room);
 
         await uiManager.createModal('RoomInfo', null, {
             onLoad(node) {
@@ -1706,9 +1707,12 @@ export class PokerController extends Component {
         if (this._stageLabel) {
             this._stageLabel.string = '';
         }
-        if (this._potLabel) {
-            this._potLabel.string = '';
+        if (this._showdownCdNode && isValid(this._showdownCdNode)) {
+            this._showdownCdNode.destroy();
+            this._showdownCdNode = null;
+            this._showdownCdLabel = null;
         }
+        this.stopShowdownCountdown();
 
         // 重置所有 label 值为 $0 并隐藏四个节点
         if (this.totalBet) {
@@ -1738,7 +1742,6 @@ export class PokerController extends Component {
         this._betNodesVisible = false;
         this._showdownSent = false;
         this._lastPlayerBets.clear();
-        this._lastPotTotal = 0;
         this._pendingBetAmount = 0;
         this._pendingBetSeat = -1;
         this.hideRaisePopup();
@@ -2147,6 +2150,7 @@ export class PokerController extends Component {
         this._lastRenderedCommunityCount = revealCount;
         this.setStageText(this.getStageTextByStage(this.room.round?.stage || ''));
         this.updatePotLabelLayout();
+        this.updateShowdownCountdown();
     }
 
     /**
@@ -2296,6 +2300,95 @@ export class PokerController extends Component {
     }
 
     /**
+     * 亮牌阶段倒计时：懒创建节点，插在 _stagePotHostNode 的 Layout 最顶部（阶段文本上方）。
+     */
+    private ensureShowdownCountdownUI() {
+        if (this._disposed) return;
+        if (this._showdownCdNode && isValid(this._showdownCdNode)) return;
+        this.ensureStageUI();
+        if (!this._stagePotHostNode || !isValid(this._stagePotHostNode)) return;
+
+        const showdownCdNode = new Node('ShowdownCountdownLabel');
+        showdownCdNode.addComponent(UITransform).setContentSize(416, 30);
+        const showdownCdLabel = showdownCdNode.addComponent(Label);
+        showdownCdLabel.fontSize = 26;
+        showdownCdLabel.color = new Color().fromHEX('#f9d972');
+        showdownCdLabel.string = '';
+        showdownCdLabel.horizontalAlign = Label.HorizontalAlign.CENTER;
+        showdownCdLabel.verticalAlign = Label.VerticalAlign.CENTER;
+        showdownCdLabel.overflow = Label.Overflow.CLAMP;
+        showdownCdNode.active = false;
+
+        // Layout 会按子节点顺序自上而下排布：插在最前面 → 显示在阶段文本上方，spacingY 自动留 10px 间距
+        this._stagePotHostNode.insertChild(showdownCdNode, 0);
+        this._showdownCdNode = showdownCdNode;
+        this._showdownCdLabel = showdownCdLabel;
+    }
+
+    /**
+     * 亮牌展示阶段倒计时：在 showdown reveal 阶段显示 "亮牌阶段 N"，
+     * 读秒与服务端 DeadlineAt 同步，倒计时结束由服务端发送 gameover 触发结算。
+     */
+    private updateShowdownCountdown() {
+        if (this._disposed || !this.room) return;
+        const st = (this.room.round?.stage || '').toLowerCase();
+        const turn = this.room.round?.action?.currentTurnUserId || '';
+        const deadlineAt = this.room.round?.action?.deadlineAt || 0;
+        const isShowdownReveal =
+            this.room.status === RoomStatus.Playing &&
+            st === 'showdown' &&
+            turn === '__showdown_reveal__';
+
+        // 非 reveal 阶段：隐藏并清理定时器
+        if (!isShowdownReveal || deadlineAt <= 0) {
+            this.stopShowdownCountdown();
+            return;
+        }
+
+        this.ensureShowdownCountdownUI();
+        if (!this._showdownCdNode || !this._showdownCdLabel) return;
+
+        // 计算剩余秒数
+        const nowSec = this.getSyncedNowSec();
+        const remain = Math.max(0, deadlineAt - nowSec);
+        const prefix = i18n.t('SHOWDOWN_COUNTDOWN') || '亮牌阶段';
+        this._showdownCdLabel.string = `${prefix} ${Math.ceil(remain)}`;
+        this._showdownCdNode.active = true;
+
+        // 启动定时器（500ms 间隔避免跳秒）
+        if (!this._showdownCdTimer) {
+            this._showdownCdTimer = setInterval(() => {
+                if (this._disposed || !this.room || !this._showdownCdLabel) return;
+                const ddl = this.room.round?.action?.deadlineAt || 0;
+                const sec = this.getSyncedNowSec();
+                const left = Math.max(0, ddl - sec);
+                if (left <= 0) {
+                    this._showdownCdLabel.string = `${prefix} 0`;
+                    this.stopShowdownCountdown();
+                    return;
+                }
+                this._showdownCdLabel.string = `${prefix} ${Math.ceil(left)}`;
+            }, 500);
+        }
+    }
+
+    /**
+     * 停止亮牌阶段倒计时并隐藏节点。
+     */
+    private stopShowdownCountdown() {
+        if (this._showdownCdTimer) {
+            clearInterval(this._showdownCdTimer);
+            this._showdownCdTimer = null;
+        }
+        if (this._showdownCdNode && isValid(this._showdownCdNode)) {
+            this._showdownCdNode.active = false;
+        }
+        if (this._showdownCdLabel && isValid(this._showdownCdLabel)) {
+            this._showdownCdLabel.string = '';
+        }
+    }
+
+    /**
      * 添加开始游戏倒计时文本
      */
     private ensureCountdownUI() {
@@ -2326,7 +2419,8 @@ export class PokerController extends Component {
     }
 
     /**
-     * 阶段标题在上、底池在下，用垂直 Layout 排布，避免两行文字重叠。
+     * 阶段标题（+ 懒创建的亮牌倒计时）用垂直 Layout 排布。
+     * 底池文字不再在此容器内展示（改由别处独立节点显示）。
      */
     private ensureStagePotColumn() {
         if (this._disposed || !this.tableNode || !isValid(this.tableNode, true)) return;
@@ -2337,11 +2431,6 @@ export class PokerController extends Component {
             this._stageLabelNode.destroy();
             this._stageLabelNode = null;
             this._stageLabel = null;
-        }
-        if (this._potLabelNode && isValid(this._potLabelNode) && this._potLabelNode.parent === this.tableNode) {
-            this._potLabelNode.destroy();
-            this._potLabelNode = null;
-            this._potLabel = null;
         }
 
         const host = new Node('StagePotColumn');
@@ -2370,26 +2459,13 @@ export class PokerController extends Component {
         stageLabel.verticalAlign = Label.VerticalAlign.CENTER;
         stageLabel.overflow = Label.Overflow.CLAMP;
 
-        const potNode = new Node('PotLabel');
-        potNode.addComponent(UITransform).setContentSize(416, 30);
-        const potLabel = potNode.addComponent(Label);
-        potLabel.fontSize = 24;
-        potLabel.color = new Color(255, 230, 145, 255);
-        potLabel.string = '';
-        potLabel.horizontalAlign = Label.HorizontalAlign.CENTER;
-        potLabel.verticalAlign = Label.VerticalAlign.CENTER;
-        potLabel.overflow = Label.Overflow.CLAMP;
-
         host.addChild(stageNode);
-        host.addChild(potNode);
         this.tableNode.addChild(host);
         host.setPosition(0, 228, 0);
 
         this._stagePotHostNode = host;
         this._stageLabelNode = stageNode;
         this._stageLabel = stageLabel;
-        this._potLabelNode = potNode;
-        this._potLabel = potLabel;
 
         this.updatePotLabelLayout();
     }
@@ -2487,10 +2563,6 @@ export class PokerController extends Component {
         const me = this.getCurrentPlayer();
         const stack = this.playerWalletAmount(me);
         const allInHand = this.playerAllInThisHand(me);
-        console.log('[betVis] playing=', playing, 'uid=', uid, 'turn=', turn,
-            'match=', turn === uid, 'stack=', stack, 'allIn=', allInHand,
-            'folded=', me?.folded, 'locked=', this._betActionLocked,
-            'gameStarted=', this._gameStarted);
         // ── 摊牌阶段特殊判断 ──
         const _stage = (this.room?.round?.stage || '').toLowerCase();
         const isShowdown = _stage === 'showdown';
@@ -2649,7 +2721,6 @@ export class PokerController extends Component {
      */
     private snapshotCurrentBets() {
         this._lastPlayerBets.clear();
-        this._lastPotTotal = this.getPotTotal();
         if (!this.room?.players) return;
         for (const p of this.room.players) {
             const seat = this.effectiveSeatIndex(p);
@@ -3270,24 +3341,7 @@ export class PokerController extends Component {
      * 更新总池
      */
     private updatePotLabel() {
-        this.ensurePotUI();
-        this.updatePotLabelLayout();
-        if (!this._potLabel) return;
-        const pot = this.room?.round?.pot;
-        const mainPot = Number(pot?.mainPot || 0);
-        const sidePot = Number(pot?.sidePot || 0);
-        const totalField = Number(pot?.total);
-        const total =
-            Number.isFinite(totalField) && totalField > 0 ? totalField : mainPot + sidePot;
-        if (total <= 0) {
-            this._potLabel.string = '';
-            return;
-        }
-        if (sidePot > 0.5) {
-            this._potLabel.string = `主池 ${Math.round(mainPot)} · 边池 ${Math.round(sidePot)}（共 ${Math.round(total)}）`;
-        } else {
-            this._potLabel.string = `底池 ${Math.round(total)}`;
-        }
+        // 底池文字不再在此容器内展示（改由别处独立节点显示），保留方法签名避免改动调用方。
     }
 
     /**
@@ -3963,10 +4017,7 @@ export class PokerController extends Component {
         this._stagePotHostNode = null;
         this._stageLabelNode = null;
         this._stageLabel = null;
-        this._potLabelNode = null;
-        this._potLabel = null;
         this._betActionLocked = false;
-        this._lastSettlementAlertKey = '';
         if (this._leaveRenderTimer) {
             clearInterval(this._leaveRenderTimer);
             this._leaveRenderTimer = null;

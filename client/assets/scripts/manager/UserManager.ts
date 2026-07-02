@@ -1,6 +1,5 @@
 import { IState } from '@/types/state';
 import { IUser } from '@/types/user';
-import { generateUUID } from '@/utils';
 import { APIManager } from './APIManager';
 import { stateManager } from './StateManager';
 
@@ -50,32 +49,32 @@ class UserManager {
     }
 
     // 
-    public async init(): Promise<IState> {
-        this.user = stateManager.getItem('user');
-        if (this.user) return { status: true };
-        // const res = await APIManager.login();
-        // if (res.status) {
-        //     this.user = res.data;
-        // } else {
-        //     const uuid = generateUUID();
-        // }
-        const uuid = generateUUID();
-        const res2 = await APIManager.register(uuid);
-        if (res2.status) {
-            this.user = res2.data;
-        } else {
-            return { status: false, message: res2.message };
-        }
+    // public async init(): Promise<IState> {
+    //     this.user = stateManager.getItem('user');
+    //     if (this.user) return { status: true };
+    //     // const res = await APIManager.login();
+    //     // if (res.status) {
+    //     //     this.user = res.data;
+    //     // } else {
+    //     //     const uuid = generateUUID();
+    //     // }
+    //     const uuid = generateUUID();
+    //     const res2 = await APIManager.register(uuid);
+    //     if (res2.status) {
+    //         this.user = res2.data;
+    //     } else {
+    //         return { status: false, message: res2.message };
+    //     }
 
-        stateManager.setItem('user', this.user);
+    //     stateManager.setItem('user', this.user);
 
-        return { status: true };
-    }
+    //     return { status: true };
+    // }
 
     /**
      * 初始化
      */
-    public async init2(): Promise<IState> {
+    public async init(): Promise<IState> {
         this.user = stateManager.getItem('user');
         const tgInitData = this.getTelegramInitData();
         console.log('[UserManager] telegram initData len =', tgInitData ? tgInitData.length : 0);

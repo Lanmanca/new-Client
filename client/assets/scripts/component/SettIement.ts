@@ -94,8 +94,8 @@ export class SettIement extends Component {
             const pokerComponent = pokerNode.getComponent(PokerCard);
             pokerComponent.poker = bestFive[i] ?? 0;
         }
-
-        this.setAvatar(container, winner.avatar);
+        console.log("赢家头像", winner.avatar_url);
+        this.setAvatar(container, winner.avatar_url);
     }
 
     /**
@@ -110,7 +110,7 @@ export class SettIement extends Component {
                 await loadRemoteSpriteFrame(avatarUrl);
 
             const avatar = container
-                .getChildByPath('Avatar')
+                .getChildByName('Avatar')
                 .getComponent(Sprite);
 
             avatar.spriteFrame = spriteFrame;

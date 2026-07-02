@@ -504,6 +504,23 @@ class UIManager {
             const form = formNode.getComponent(Form);
             form.items = option.items;
 
+            // Form 预制件设计尺寸为 720×1280（全屏页面），直接塞进 Modal 的 content（视口高约 320）
+            // 会被 ScrollView 误判为内容溢出而出现多余的滚动条。此处压成一个紧凑高度，
+            // 并禁用其 Widget 全方位对齐（避免它把自身拉回 1280），让 content 仅按实际表单项高度自适应。
+            const formUi = formNode.getComponent(UITransform);
+            if (formUi) {
+                const itemCount = Math.max(1, option.items?.length ?? 1);
+                // 每项约 90 + 间距 30，预留顶部留白
+                const compactHeight = itemCount * 90 + (itemCount - 1) * 30 + 40;
+                formUi.setContentSize(560, compactHeight);
+            }
+            const formWidget = formNode.getComponent(Widget);
+            if (formWidget) {
+                formWidget.alignMode = Widget.AlignMode.ALWAYS;
+                formWidget.alignFlags = 0;
+                formWidget.updateAlignment();
+            }
+
             const modalNode = instantiate(modalPrefab);
             const modalCmp = modalNode.getComponent(Modal);
             const maskNode = this.createMask();

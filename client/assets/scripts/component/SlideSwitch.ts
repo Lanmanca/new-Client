@@ -78,7 +78,7 @@ export class SlideSwitch extends Component {
             const btn = this.btnList[i];
             const label = btn.getComponentInChildren(Label);
             if (label) {
-                label.color = i === this.currentIndex ? new Color().fromHEX('#FFFFFF') : new Color().fromHEX('#777777');
+                label.color = i === this.currentIndex ? new Color().fromHEX('#FFFFFF') : new Color().fromHEX('#acacacff');
             }
         }
     }
@@ -94,7 +94,7 @@ export class SlideSwitch extends Component {
         if (!slideTrans || !btnTrans) return;
 
         // 滑块尺寸
-        slideTrans.width = btnTrans.width * 0.9;
+        slideTrans.width = btnTrans.width;
         slideTrans.height = btnTrans.height * 0.9;
 
         // 按钮世界坐标转本地坐标

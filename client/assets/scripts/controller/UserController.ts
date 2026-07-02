@@ -13,8 +13,7 @@ import {
     Label,
     Node,
     Prefab,
-    Sprite,
-    UITransform
+    Sprite
 } from 'cc';
 const { ccclass, property } = _decorator;
 
@@ -112,8 +111,6 @@ export class UserController extends Component {
             const spriteFrame = await loadRemoteSpriteFrame(avatarUrl);
             this.childNodes.avatar.spriteFrame = spriteFrame;
             console.log("user中的头像", spriteFrame);
-            const uiTransform = this.childNodes.avatar.getComponent(UITransform);
-            uiTransform?.setContentSize(150, 150);
         } catch (error) {
             console.error('图片加载失败', error);
         }

@@ -108,6 +108,10 @@ export enum EventType {
      * 游戏进行中重连恢复
      */
     Recover = 'recover',
+    /**
+     * 摊牌亮牌
+     */
+    Showdown = 'showdown',
 }
 
 /**

@@ -13,6 +13,7 @@ export class Countdown extends Component {
     private totalTime: number = 0;         // 倒计时总时长（秒）
     private currentTime: number = 0;       // 当前剩余时间
     private isCounting: boolean = false;
+    private onComplete: (() => void) | null = null;  // 倒计时结束回调
 
     onLoad() {
         this.hide();
@@ -21,13 +22,17 @@ export class Countdown extends Component {
     /**
      * 开启倒计时
      * @param duration 倒计时时长（秒）
+     * @param remaining 剩余时间（默认等于 duration）
+     * @param onComplete 倒计时结束时的回调（可选）
      */
-    public startCountdown(duration: number, remaining: number = duration) {
+    public startCountdown(duration: number, remaining: number = duration, onComplete?: () => void) {
+        this.onComplete = onComplete || null;
         this.totalTime = Math.max(0.01, duration);
         this.currentTime = Math.max(0, Math.min(remaining, this.totalTime));
 
         if (this.currentTime <= 0) {
             this.hide();
+            if (this.onComplete) this.onComplete();
             return;
         }
 
@@ -68,6 +73,11 @@ export class Countdown extends Component {
             // 倒计时结束
             this.currentTime = 0;
             this.hide();
+            if (this.onComplete) {
+                const cb = this.onComplete;
+                this.onComplete = null;
+                cb();
+            }
         } else {
             this.render();
         }

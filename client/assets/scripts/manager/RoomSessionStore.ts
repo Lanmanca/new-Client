@@ -85,7 +85,17 @@ export interface RecoverSession {
     room_state?: IRoom | null;
 }
 
-export type RoomSession = RoomSessionState | RoomSessionPrepare | leaveRoom | GameOver | RecoverSession;
+export interface ShowdownSession {
+    type: 'showdown';
+    players: {
+        seat_index: number;
+        user_id: string;
+        nickname: string;
+        cards: number[];
+    }[];
+}
+
+export type RoomSession = RoomSessionState | RoomSessionPrepare | leaveRoom | GameOver | RecoverSession | ShowdownSession;
 export type RoomSessionSnapshot = RoomSession | null;
 
 type Listener = (state: RoomSessionSnapshot) => void;

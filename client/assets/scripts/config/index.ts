@@ -29,14 +29,15 @@ export default class Config {
     /**
      * API地址
      */
-    // public static readonly SERVER_URL = 'https://zxc.esoyapk.cc';
-    public static readonly SERVER_URL = 'http://192.168.1.64:8000';
+    // public static readonly SERVER_URL = 'http://192.168.1.105:8000';
+    public static readonly SERVER_URL = 'https://zxc.esoyapk.cc';
+
 
     /**
      * WS地址
      */
-    // public static readonly WS_URL = 'wss://zxc.esoyapk.cc';
-    public static readonly WS_URL = 'ws://192.168.1.64:8000';
+    public static readonly WS_URL = 'wss://zxc.esoyapk.cc';
+    // public static readonly WS_URL = 'ws://192.168.1.105:8000';
 
     /**
      * APP版本
@@ -289,12 +290,6 @@ export default class Config {
             {
                 label: i18n.t('game.room_info.room_number.title'),
                 key: 'roomNumber',
-                type: FormItemType.Input,
-                readonly: true,
-            },
-            {
-                label: i18n.t('game.room_info.owner.title'),
-                key: 'owner',
                 type: FormItemType.Input,
                 readonly: true,
             },
